@@ -23,7 +23,10 @@ const FrisbeeQuest = () => {
       vz: 0,
       returning: false,
       speed: 0.3,
-      color: 0x00ff00 // Grün
+      color: 0x00ff00, // Grün
+      startX: 0,
+      startZ: 0,
+      maxDistance: 5 // Maximale Flugdistanz in Metern
     },
     chest: {
       x: 0,
@@ -188,9 +191,12 @@ const FrisbeeQuest = () => {
         active: true,
         x: prev.player.x,
         z: prev.player.z,
+        startX: prev.player.x,
+        startZ: prev.player.z,
         vx: direction.x * prev.frisbee.speed,
         vz: direction.z * prev.frisbee.speed,
-        returning: false
+        returning: false,
+        color: prev.skillUnlocked ? 0xff0000 : 0x00ff00 // Rot wenn Skill unlocked, sonst Grün
       }
     }));
   };
@@ -219,21 +225,29 @@ const FrisbeeQuest = () => {
         newState.player.x = Math.max(-20, Math.min(20, newState.player.x));
         newState.player.z = Math.max(-6, Math.min(6, newState.player.z));
 
+        // SPIELER durch TRUHE laufen - Skill einsammeln
+        if (!newState.chest.opened && checkCollision(newState.player, newState.chest, 1.2)) {
+          newState.chest.opened = true;
+          newState.skillUnlocked = true;
+        }
+
         // Frisbee Update
         if (newState.frisbee.active) {
           if (!newState.frisbee.returning) {
             newState.frisbee.x += newState.frisbee.vx;
             newState.frisbee.z += newState.frisbee.vz;
 
-            // Truhe treffen
-            if (!newState.chest.opened && checkCollision(newState.frisbee, newState.chest, 1.5)) {
-              newState.chest.opened = true;
-              newState.skillUnlocked = true;
-              newState.frisbee.color = 0xff0000; // Rot
+            // Distanz vom Startpunkt berechnen
+            const dx = newState.frisbee.x - newState.frisbee.startX;
+            const dz = newState.frisbee.z - newState.frisbee.startZ;
+            const distanceFromStart = Math.sqrt(dx * dx + dz * dz);
+
+            // Wenn maximale Distanz erreicht, zurückkommen
+            if (distanceFromStart >= newState.frisbee.maxDistance) {
               newState.frisbee.returning = true;
             }
 
-            // Außerhalb
+            // Außerhalb Spielfeld
             if (Math.abs(newState.frisbee.x) > 25 || Math.abs(newState.frisbee.z) > 10) {
               newState.frisbee.returning = true;
             }
@@ -304,7 +318,7 @@ const FrisbeeQuest = () => {
       <div className="mt-4 text-white text-center space-y-2">
         <p className="font-bold">WASD - Bewegung | Linksklick - Frisbee werfen</p>
         {gameState.skillUnlocked && (
-          <p className="text-red-500 font-bold">✓ Skill freigeschaltet: Rote Frisbee!</p>
+          <p className="text-red-500 font-bold text-xl">🔥 Feuer eingesammelt! 🔥</p>
         )}
         {gameState.levelComplete && (
           <p className="text-yellow-400 text-2xl font-bold">🎉 LEVEL GESCHAFFT! 🎉</p>
