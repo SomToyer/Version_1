@@ -297,6 +297,9 @@ const FrisbeeQuestV2 = () => {
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
+    // Texture Loader
+    const textureLoader = new THREE.TextureLoader();
+
     // Arena Floor with Grasland texture
     const graslandTexture = textureLoader.load('/assets/Grasland.png');
     graslandTexture.wrapS = THREE.RepeatWrapping;
@@ -332,9 +335,6 @@ const FrisbeeQuestV2 = () => {
     eastWall.position.set(15, 1.5, 0);
     eastWall.castShadow = true;
     scene.add(eastWall);
-
-    // Texture Loader
-    const textureLoader = new THREE.TextureLoader();
 
     // Obstacles - Baum1 Sprites
     obstaclesRef.current = [];
