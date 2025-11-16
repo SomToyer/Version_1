@@ -280,13 +280,16 @@ const FrisbeeQuestV2 = () => {
       obstaclesRef.current.push({ x: pos.x, z: pos.z, size: 2 });
     });
 
-    // Player
-    const player = new THREE.Mesh(
-      new THREE.BoxGeometry(0.8, 1.2, 0.8),
-      new THREE.MeshLambertMaterial({ color: 0x4a90e2 })
-    );
-    player.position.set(-10, 0.6, 0);
-    player.castShadow = true;
+    // Player - Donut Sprite
+    const textureLoader = new THREE.TextureLoader();
+    const donutTexture = textureLoader.load('/assets/Donutplayer.png');
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: donutTexture,
+      transparent: true
+    });
+    const player = new THREE.Sprite(spriteMaterial);
+    player.scale.set(1.5, 1.5, 1); // Größe anpassen
+    player.position.set(-10, 0.75, 0);
     scene.add(player);
     playerRef.current = player;
 
@@ -651,12 +654,11 @@ const FrisbeeQuestV2 = () => {
       playerRef.current.position.x = game.player.x;
       playerRef.current.position.z = game.player.z;
 
-      // Shield visual effect
+      // Shield visual effect (tint for sprite)
       if (game.player.hasShield) {
-        playerRef.current.material.emissive = new THREE.Color(0x4169e1);
-        playerRef.current.material.emissiveIntensity = 0.3;
+        playerRef.current.material.color.setHex(0x4169e1);
       } else {
-        playerRef.current.material.emissive = new THREE.Color(0x000000);
+        playerRef.current.material.color.setHex(0xffffff);
       }
     }
 
