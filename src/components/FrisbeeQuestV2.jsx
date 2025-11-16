@@ -90,6 +90,7 @@ const FrisbeeQuestV2 = () => {
   const gamepadRef = useRef(null);
   const gamepadButtonState = useRef({ throwButton: false });
   const chargingStateRef = useRef({ isCharging: false, chargeTime: 0 });
+  const pendingThrowRef = useRef({ shouldThrow: false, chargeTime: 0 });
 
   // ===== SPAWN POWER-UP =====
   const spawnPowerUp = () => {
@@ -240,15 +241,26 @@ const FrisbeeQuestV2 = () => {
 
   // ===== GAMEPAD SUPPORT =====
   useEffect(() => {
+    const lastButtonState = { X: false };
+
     const gamepadInterval = setInterval(() => {
       const gamepads = navigator.getGamepads();
       if (gamepads[0]) {
         gamepadRef.current = gamepads[0];
+
+        // X-Button (Button 2) zum Spielstart im Menü
+        const xButtonPressed = gamepads[0].buttons[2]?.pressed;
+        if (gameState === 'MENU' && xButtonPressed && !lastButtonState.X) {
+          setGameState('PLAYING');
+          setTimeout(() => spawnPowerUp(), 2000);
+          setTimeout(() => spawnPowerUp(), 4000);
+        }
+        lastButtonState.X = xButtonPressed;
       }
     }, 100);
 
     return () => clearInterval(gamepadInterval);
-  }, []);
+  }, [gameState]);
 
   // ===== THREE.JS SETUP =====
   useEffect(() => {
@@ -580,12 +592,13 @@ const FrisbeeQuestV2 = () => {
             newState.player.chargeTime = 0;
           }
 
-          // Button losgelassen -> Werfen
+          // Button losgelassen -> Werfen vorbereiten
           if (!throwButtonPressed && gamepadButtonState.current.throwButton && chargingStateRef.current.isCharging) {
             const chargeTime = chargingStateRef.current.chargeTime;
             chargingStateRef.current.isCharging = false;
             chargingStateRef.current.chargeTime = 0;
-            throwFrisbeeForward(chargeTime);
+            pendingThrowRef.current.shouldThrow = true;
+            pendingThrowRef.current.chargeTime = chargeTime;
             newState.player.charging = false;
             newState.player.chargeTime = 0;
           }
@@ -801,6 +814,16 @@ const FrisbeeQuestV2 = () => {
     const intervalId = setInterval(gameLoop, 1000 / 30); // 30 FPS statt 60
     return () => clearInterval(intervalId);
   }, [gameState]);
+
+  // ===== PENDING GAMEPAD THROW =====
+  useEffect(() => {
+    if (pendingThrowRef.current.shouldThrow) {
+      const chargeTime = pendingThrowRef.current.chargeTime;
+      pendingThrowRef.current.shouldThrow = false;
+      pendingThrowRef.current.chargeTime = 0;
+      throwFrisbeeForward(chargeTime);
+    }
+  }, [game.player.charging]);
 
   // ===== UPDATE 3D OBJECTS =====
   useEffect(() => {
