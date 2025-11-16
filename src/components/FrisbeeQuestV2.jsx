@@ -495,6 +495,19 @@ const FrisbeeQuestV2 = () => {
     return Math.sqrt(dx * dx + dz * dz) < radius;
   };
 
+  // Obstacle Collision (AABB - Axis-Aligned Bounding Box)
+  const checkObstacleCollision = (x, z, entityRadius = 0.5) => {
+    return obstaclesRef.current.some(obstacle => {
+      const halfSize = obstacle.size / 2;
+      return (
+        x + entityRadius > obstacle.x - halfSize &&
+        x - entityRadius < obstacle.x + halfSize &&
+        z + entityRadius > obstacle.z - halfSize &&
+        z - entityRadius < obstacle.z + halfSize
+      );
+    });
+  };
+
   // ===== RESET GAME =====
   const resetGame = () => {
     chargingStateRef.current.isCharging = false;
@@ -626,8 +639,15 @@ const FrisbeeQuestV2 = () => {
           };
         }
 
-        newState.player.x += moveX;
-        newState.player.z += moveZ;
+        // Check obstacle collision before moving
+        const newX = newState.player.x + moveX;
+        const newZ = newState.player.z + moveZ;
+
+        // Only move if not colliding with obstacles
+        if (!checkObstacleCollision(newX, newZ, 0.5)) {
+          newState.player.x = newX;
+          newState.player.z = newZ;
+        }
 
         newState.player.x = Math.max(-14, Math.min(14, newState.player.x));
         newState.player.z = Math.max(-9, Math.min(9, newState.player.z));
@@ -704,8 +724,15 @@ const FrisbeeQuestV2 = () => {
             };
           }
 
-          newEnemy.x += moveX;
-          newEnemy.z += moveZ;
+          // Check obstacle collision before moving
+          const newEnemyX = newEnemy.x + moveX;
+          const newEnemyZ = newEnemy.z + moveZ;
+
+          // Only move if not colliding with obstacles
+          if (!checkObstacleCollision(newEnemyX, newEnemyZ, 0.5)) {
+            newEnemy.x = newEnemyX;
+            newEnemy.z = newEnemyZ;
+          }
 
           return newEnemy;
         });
