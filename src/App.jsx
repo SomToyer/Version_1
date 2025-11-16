@@ -1,8 +1,8 @@
 import React from 'react'
-import FrisbeeQuest from './components/FrisbeeQuest'
+import FrisbeeQuestV2 from './components/FrisbeeQuestV2'
 
 function App() {
-  return <FrisbeeQuest />
+  return <FrisbeeQuestV2 />
 }
 
 export default App

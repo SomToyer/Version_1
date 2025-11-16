@@ -1,16 +1,29 @@
-# 🎮 Frisbee Quest 3D - MVP v0.1
+# 🎮 Frisbee Quest 3D - MVP v0.2a - wie Fu
 
-Ein 3D-Frisbee-Spiel entwickelt mit React und Three.js!
+Ein 3D-Frisbee-Arena-Spiel inspiriert von **Boomerang Fu**, entwickelt mit React und Three.js!
 
-## 🎯 Spielziel
+## 🆕 Version 0.2a Features
 
-Steuere deinen Charakter durch das Level, öffne die Truhe mit deiner Frisbee und erreiche das goldene Ziel!
+- 🎮 **Xbox Controller Support** - Spiele mit Gamepad!
+- 🏟️ **Arena mit Hindernissen** - Boomerang Fu Stil
+- 📋 **Hauptmenü** - Start & Controls
+- 💖 **Health System** - 3 Leben
+- ⭐ **Score System** - Punkte sammeln
+- 🎯 **Game States** - Menü, Spiel, Game Over
+- 👾 **3 Gegner** - Besiege alle!
 
 ## 🎮 Steuerung
 
+### Tastatur:
 - **WASD** oder **Pfeiltasten**: Charakter bewegen
-- **Linksklick**: Frisbee in Richtung des Mauszeigers werfen
-- Die Frisbee kehrt automatisch zu dir zurück!
+- **LEERTASTE**: Frisbee werfen
+- **ENTER**: Spiel starten (im Menü)
+- **C**: Controls anzeigen (im Menü)
+- **R**: Neustart (bei Game Over)
+
+### Xbox Controller:
+- **Linker Stick**: Bewegen
+- **A-Button**: Frisbee werfen
 
 ## 🚀 So startest du das Spiel auf deinem PC
 
