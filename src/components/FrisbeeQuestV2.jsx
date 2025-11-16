@@ -55,9 +55,9 @@ const FrisbeeQuestV2 = () => {
       baseMaxDistance: 6
     },
     enemies: [
-      { x: 8, z: -4, speed: 0.12, alive: true, health: 1 },
-      { x: 10, z: 2, speed: 0.12, alive: true, health: 1 },
-      { x: 6, z: 0, speed: 0.12, alive: true, health: 1 }
+      { x: 8, z: -4, homeX: 8, homeZ: -4, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 5 },
+      { x: 10, z: 2, homeX: 10, homeZ: 2, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 5 },
+      { x: 6, z: 0, homeX: 6, homeZ: 0, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 5 }
     ],
     enemyFrisbees: [
       { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
@@ -440,9 +440,9 @@ const FrisbeeQuestV2 = () => {
         baseMaxDistance: 6
       },
       enemies: [
-        { x: 8, z: -4, speed: 0.12, alive: true, health: 1 },
-        { x: 10, z: 2, speed: 0.12, alive: true, health: 1 },
-        { x: 6, z: 0, speed: 0.12, alive: true, health: 1 }
+        { x: 8, z: -4, homeX: 8, homeZ: -4, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 5 },
+        { x: 10, z: 2, homeX: 10, homeZ: 2, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 5 },
+        { x: 6, z: 0, homeX: 6, homeZ: 0, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 5 }
       ],
       enemyFrisbees: [
         { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
@@ -513,7 +513,7 @@ const FrisbeeQuestV2 = () => {
           return true;
         });
 
-        // Enemy AI
+        // Enemy AI - Territory Defense
         newState.enemies = newState.enemies.map((enemy, index) => {
           if (!enemy.alive) return enemy;
 
@@ -522,24 +522,55 @@ const FrisbeeQuestV2 = () => {
           const dzToPlayer = newState.player.z - enemy.z;
           const distanceToPlayer = Math.sqrt(dxToPlayer * dxToPlayer + dzToPlayer * dzToPlayer);
 
-          if (distanceToPlayer > 3) {
-            newEnemy.x += (dxToPlayer / distanceToPlayer) * enemy.speed;
-            newEnemy.z += (dzToPlayer / distanceToPlayer) * enemy.speed;
+          const dxToHome = enemy.homeX - enemy.x;
+          const dzToHome = enemy.homeZ - enemy.z;
+          const distanceToHome = Math.sqrt(dxToHome * dxToHome + dzToHome * dzToHome);
+
+          let moveX = 0;
+          let moveZ = 0;
+
+          // Spieler in meinem Territory? Angreifen!
+          if (distanceToPlayer <= enemy.territoryRadius) {
+            // Greife Spieler an
+            if (distanceToPlayer > 2) {
+              moveX = (dxToPlayer / distanceToPlayer) * enemy.speed;
+              moveZ = (dzToPlayer / distanceToPlayer) * enemy.speed;
+            }
+
+            // Wirf Frisbee in Bewegungsrichtung
+            if (!newState.enemyFrisbees[index].active && distanceToPlayer < 8) {
+              const direction = newEnemy.lastMoveDirection || { x: dxToPlayer / distanceToPlayer, z: dzToPlayer / distanceToPlayer };
+              newState.enemyFrisbees[index] = {
+                ...newState.enemyFrisbees[index],
+                active: true,
+                x: enemy.x,
+                z: enemy.z,
+                startX: enemy.x,
+                startZ: enemy.z,
+                vx: direction.x * newState.enemyFrisbees[index].speed,
+                vz: direction.z * newState.enemyFrisbees[index].speed,
+                returning: false
+              };
+            }
+          } else {
+            // Zurück zur Heimatposition
+            if (distanceToHome > 0.5) {
+              moveX = (dxToHome / distanceToHome) * enemy.speed;
+              moveZ = (dzToHome / distanceToHome) * enemy.speed;
+            }
           }
 
-          if (!newState.enemyFrisbees[index].active && distanceToPlayer < 10) {
-            newState.enemyFrisbees[index] = {
-              ...newState.enemyFrisbees[index],
-              active: true,
-              x: enemy.x,
-              z: enemy.z,
-              startX: enemy.x,
-              startZ: enemy.z,
-              vx: (dxToPlayer / distanceToPlayer) * newState.enemyFrisbees[index].speed,
-              vz: (dzToPlayer / distanceToPlayer) * newState.enemyFrisbees[index].speed,
-              returning: false
+          // Speichere Bewegungsrichtung
+          const moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
+          if (moveLength > 0) {
+            newEnemy.lastMoveDirection = {
+              x: moveX / moveLength,
+              z: moveZ / moveLength
             };
           }
+
+          newEnemy.x += moveX;
+          newEnemy.z += moveZ;
 
           return newEnemy;
         });
