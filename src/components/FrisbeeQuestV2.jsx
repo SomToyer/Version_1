@@ -644,7 +644,7 @@ const FrisbeeQuestV2 = () => {
       });
     };
 
-    const intervalId = setInterval(gameLoop, 1000 / 60);
+    const intervalId = setInterval(gameLoop, 1000 / 30); // 30 FPS statt 60
     return () => clearInterval(intervalId);
   }, [gameState]);
 
