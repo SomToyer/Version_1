@@ -62,19 +62,22 @@ const FrisbeeQuestV2 = () => {
         x: 16, z: -8, homeX: 16, homeZ: -8, speed: 0.12, alive: true, health: 1,
         lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 10,
         patrolPoints: [{ x: 16, z: -12 }, { x: 20, z: -8 }, { x: 16, z: -4 }, { x: 12, z: -8 }],
-        currentPatrolIndex: 0
+        currentPatrolIndex: 0,
+        meleeCooldown: 0
       },
       {
         x: 20, z: 4, homeX: 20, homeZ: 4, speed: 0.12, alive: true, health: 1,
         lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 10,
         patrolPoints: [{ x: 20, z: 0 }, { x: 24, z: 4 }, { x: 20, z: 8 }, { x: 16, z: 4 }],
-        currentPatrolIndex: 0
+        currentPatrolIndex: 0,
+        meleeCooldown: 0
       },
       {
         x: 12, z: 0, homeX: 12, homeZ: 0, speed: 0.12, alive: true, health: 1,
         lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 10,
         patrolPoints: [{ x: 8, z: 0 }, { x: 12, z: 4 }, { x: 16, z: 0 }, { x: 12, z: -4 }],
-        currentPatrolIndex: 0
+        currentPatrolIndex: 0,
+        meleeCooldown: 0
       }
     ],
     enemyFrisbees: [
@@ -657,19 +660,22 @@ const FrisbeeQuestV2 = () => {
           x: 16, z: -8, homeX: 16, homeZ: -8, speed: 0.12, alive: true, health: 1,
           lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 10,
           patrolPoints: [{ x: 16, z: -12 }, { x: 20, z: -8 }, { x: 16, z: -4 }, { x: 12, z: -8 }],
-          currentPatrolIndex: 0
+          currentPatrolIndex: 0,
+          meleeCooldown: 0
         },
         {
           x: 20, z: 4, homeX: 20, homeZ: 4, speed: 0.12, alive: true, health: 1,
           lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 10,
           patrolPoints: [{ x: 20, z: 0 }, { x: 24, z: 4 }, { x: 20, z: 8 }, { x: 16, z: 4 }],
-          currentPatrolIndex: 0
+          currentPatrolIndex: 0,
+          meleeCooldown: 0
         },
         {
           x: 12, z: 0, homeX: 12, homeZ: 0, speed: 0.12, alive: true, health: 1,
           lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 10,
           patrolPoints: [{ x: 8, z: 0 }, { x: 12, z: 4 }, { x: 16, z: 0 }, { x: 12, z: -4 }],
-          currentPatrolIndex: 0
+          currentPatrolIndex: 0,
+          meleeCooldown: 0
         }
       ],
       enemyFrisbees: [
@@ -804,14 +810,28 @@ const FrisbeeQuestV2 = () => {
 
           // Spieler in meinem Territory? Angreifen!
           if (distanceToPlayer <= enemy.territoryRadius) {
-            // Greife Spieler an
-            if (distanceToPlayer > 2) {
+            // Nahkampf-Angriff wenn sehr nah (mit Cooldown)
+            if (distanceToPlayer < 1.5 && newEnemy.meleeCooldown <= 0) {
+              // Greife Spieler mit Nahkampf an
+              if (newState.player.hasShield) {
+                newState.player.powerUps = newState.player.powerUps.filter(p => p !== 'SHIELD');
+                newState.player.hasShield = false;
+              } else {
+                newState.player.health -= 1;
+                if (newState.player.health <= 0) {
+                  setGameState('GAME_OVER');
+                }
+              }
+              // Set cooldown: 2 seconds at 30 FPS
+              newEnemy.meleeCooldown = 60;
+            } else if (distanceToPlayer > 2) {
+              // Bewege dich zum Spieler
               moveX = (dxToPlayer / distanceToPlayer) * enemy.speed;
               moveZ = (dzToPlayer / distanceToPlayer) * enemy.speed;
             }
 
-            // Wirf Frisbee in Bewegungsrichtung
-            if (!newState.enemyFrisbees[index].active && distanceToPlayer < 8) {
+            // Wirf Frisbee in Bewegungsrichtung (nur wenn nicht zu nah)
+            if (!newState.enemyFrisbees[index].active && distanceToPlayer > 3 && distanceToPlayer < 8) {
               const direction = newEnemy.lastMoveDirection || { x: dxToPlayer / distanceToPlayer, z: dzToPlayer / distanceToPlayer };
               newState.enemyFrisbees[index] = {
                 ...newState.enemyFrisbees[index],
@@ -859,6 +879,11 @@ const FrisbeeQuestV2 = () => {
           if (!checkObstacleCollision(newEnemyX, newEnemyZ, 0.5)) {
             newEnemy.x = newEnemyX;
             newEnemy.z = newEnemyZ;
+          }
+
+          // Decrement melee cooldown
+          if (newEnemy.meleeCooldown > 0) {
+            newEnemy.meleeCooldown--;
           }
 
           return newEnemy;
