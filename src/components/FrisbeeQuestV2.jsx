@@ -1134,6 +1134,26 @@ const FrisbeeQuestV2 = () => {
             <p className="text-xl">Drücke R zum Neustarten</p>
           </div>
         )}
+
+        {/* ACTIVE POWER-UPS - Obere linke Ecke */}
+        {gameState === 'PLAYING' && game.player.powerUps.length > 0 && (
+          <div className="absolute top-4 left-4 bg-black bg-opacity-70 rounded-lg p-3 border-2 border-blue-400">
+            <div className="flex gap-2">
+              {game.player.powerUps.map((puType, index) => {
+                const info = POWER_UP_TYPES[puType];
+                return (
+                  <div
+                    key={index}
+                    className="bg-gray-800 rounded-lg p-2 border-2 border-blue-300"
+                    title={info.name}
+                  >
+                    <span className="text-4xl">{info.icon}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* HUD */}
