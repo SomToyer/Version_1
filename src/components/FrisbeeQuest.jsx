@@ -454,7 +454,7 @@ const FrisbeeQuest = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 p-4">
-      <h1 className="text-3xl font-bold text-white mb-4">Frisbee Quest 3D - MVP v0.2</h1>
+      <h1 className="text-3xl font-bold text-white mb-4">Frisbee Quest 3D - MVP v0.1a - mit Gegner</h1>
       <div
         ref={mountRef}
         onClick={throwFrisbee}
