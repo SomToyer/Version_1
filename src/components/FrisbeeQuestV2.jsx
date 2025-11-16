@@ -248,13 +248,21 @@ const FrisbeeQuestV2 = () => {
       if (gamepads[0]) {
         gamepadRef.current = gamepads[0];
 
-        // X-Button (Button 2) zum Spielstart im Menü
+        // X-Button (Button 2)
         const xButtonPressed = gamepads[0].buttons[2]?.pressed;
+
+        // Spielstart im Menü
         if (gameState === 'MENU' && xButtonPressed && !lastButtonState.X) {
           setGameState('PLAYING');
           setTimeout(() => spawnPowerUp(), 2000);
           setTimeout(() => spawnPowerUp(), 4000);
         }
+
+        // Neustart bei Game Over
+        if (gameState === 'GAME_OVER' && xButtonPressed && !lastButtonState.X) {
+          resetGame();
+        }
+
         lastButtonState.X = xButtonPressed;
       }
     }, 100);
