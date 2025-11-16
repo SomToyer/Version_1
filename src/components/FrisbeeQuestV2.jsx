@@ -1428,13 +1428,36 @@ const FrisbeeQuestV2 = () => {
       player2FrisbeeRef.current.visible = true;
     }
 
-    // Kamera folgt Spieler (höher für größere Arena)
-    if (cameraRef.current && playerRef.current) {
-      const cameraOffset = { x: 0, y: 16, z: 12 }; // Höher und weiter weg für größere Arena
-      cameraRef.current.position.x = game.player.x + cameraOffset.x;
-      cameraRef.current.position.y = cameraOffset.y;
-      cameraRef.current.position.z = game.player.z + cameraOffset.z;
-      cameraRef.current.lookAt(game.player.x, 0, game.player.z);
+    // Kamera folgt beiden Spielern dynamisch
+    if (cameraRef.current && playerRef.current && player2Ref.current) {
+      // Berechne Mittelpunkt zwischen beiden Spielern
+      const centerX = (game.player.x + game.player2.x) / 2;
+      const centerZ = (game.player.z + game.player2.z) / 2;
+
+      // Berechne Distanz zwischen beiden Spielern
+      const dx = game.player.x - game.player2.x;
+      const dz = game.player.z - game.player2.z;
+      const distanceBetweenPlayers = Math.sqrt(dx * dx + dz * dz);
+
+      // Dynamische Kamera-Höhe und Distanz basierend auf Spieler-Abstand
+      // Min: 16 units hoch bei nahen Spielern, Max: 30 units bei weit entfernten
+      const minHeight = 16;
+      const maxHeight = 30;
+      const minDistance = 12;
+      const maxDistance = 25;
+
+      // Je weiter die Spieler auseinander, desto höher/weiter die Kamera
+      const distanceFactor = Math.min(distanceBetweenPlayers / 20, 1); // Normalisiert auf 0-1
+      const cameraHeight = minHeight + (maxHeight - minHeight) * distanceFactor;
+      const cameraDistance = minDistance + (maxDistance - minDistance) * distanceFactor;
+
+      // Kamera Position
+      cameraRef.current.position.x = centerX;
+      cameraRef.current.position.y = cameraHeight;
+      cameraRef.current.position.z = centerZ + cameraDistance;
+
+      // Schaue auf den Mittelpunkt
+      cameraRef.current.lookAt(centerX, 0, centerZ);
     }
 
     game.enemies.forEach((enemy, index) => {
