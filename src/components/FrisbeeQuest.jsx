@@ -34,8 +34,6 @@ const FrisbeeQuest = () => {
       x: 5,
       z: -3,
       speed: 0.1, // Langsamer als Spieler
-      lastThrowTime: 0,
-      throwCooldown: 3000, // 3 Sekunden zwischen Würfen
       alive: true
     },
     enemyFrisbee: {
@@ -287,11 +285,8 @@ const FrisbeeQuest = () => {
             newState.enemy.z += (dzToPlayer / distanceToPlayer) * newState.enemy.speed;
           }
 
-          // Gegner wirft Frisbee in Richtung Spieler
-          const currentTime = Date.now();
-          if (!newState.enemyFrisbee.active &&
-              currentTime - newState.enemy.lastThrowTime > newState.enemy.throwCooldown &&
-              distanceToPlayer < 10) { // Wirft nur wenn Spieler in Reichweite
+          // Gegner wirft Frisbee in Richtung Spieler (wie Spieler - sobald Frisbee zurück ist)
+          if (!newState.enemyFrisbee.active && distanceToPlayer < 10) { // Wirft nur wenn Spieler in Reichweite
 
             const throwDirection = {
               x: dxToPlayer / distanceToPlayer,
@@ -309,8 +304,6 @@ const FrisbeeQuest = () => {
               vz: throwDirection.z * newState.enemyFrisbee.speed,
               returning: false
             };
-
-            newState.enemy.lastThrowTime = currentTime;
           }
         }
 
