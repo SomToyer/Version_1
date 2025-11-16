@@ -519,6 +519,73 @@ const FrisbeeQuestV2 = () => {
     });
   };
 
+  // Frisbee Bounce (Reflexion an Wänden und Hindernissen)
+  const handleFrisbeeBounce = (frisbee) => {
+    const frisbeeRadius = 0.3;
+    let bounced = false;
+
+    // Arena-Wände (mit kleinem Puffer)
+    if (frisbee.x <= -14.5) {
+      frisbee.x = -14.5;
+      frisbee.vx = Math.abs(frisbee.vx); // Nach rechts abprallen
+      bounced = true;
+    }
+    if (frisbee.x >= 14.5) {
+      frisbee.x = 14.5;
+      frisbee.vx = -Math.abs(frisbee.vx); // Nach links abprallen
+      bounced = true;
+    }
+    if (frisbee.z <= -9.5) {
+      frisbee.z = -9.5;
+      frisbee.vz = Math.abs(frisbee.vz); // Nach unten abprallen
+      bounced = true;
+    }
+    if (frisbee.z >= 9.5) {
+      frisbee.z = 9.5;
+      frisbee.vz = -Math.abs(frisbee.vz); // Nach oben abprallen
+      bounced = true;
+    }
+
+    // Hindernisse (Bäume)
+    obstaclesRef.current.forEach(obstacle => {
+      const halfSize = obstacle.size / 2;
+      const colliding = (
+        frisbee.x + frisbeeRadius > obstacle.x - halfSize &&
+        frisbee.x - frisbeeRadius < obstacle.x + halfSize &&
+        frisbee.z + frisbeeRadius > obstacle.z - halfSize &&
+        frisbee.z - frisbeeRadius < obstacle.z + halfSize
+      );
+
+      if (colliding) {
+        // Berechne von welcher Seite die Frisbee kam
+        const fromLeft = frisbee.x < obstacle.x;
+        const fromTop = frisbee.z < obstacle.z;
+
+        const overlapX = fromLeft
+          ? (frisbee.x + frisbeeRadius) - (obstacle.x - halfSize)
+          : (obstacle.x + halfSize) - (frisbee.x - frisbeeRadius);
+
+        const overlapZ = fromTop
+          ? (frisbee.z + frisbeeRadius) - (obstacle.z - halfSize)
+          : (obstacle.z + halfSize) - (frisbee.z - frisbeeRadius);
+
+        // Pralle in die Richtung ab, wo weniger Überlappung ist
+        if (overlapX < overlapZ) {
+          // Horizontal abprallen
+          frisbee.vx = -frisbee.vx;
+          frisbee.x = fromLeft ? obstacle.x - halfSize - frisbeeRadius : obstacle.x + halfSize + frisbeeRadius;
+        } else {
+          // Vertikal abprallen
+          frisbee.vz = -frisbee.vz;
+          frisbee.z = fromTop ? obstacle.z - halfSize - frisbeeRadius : obstacle.z + halfSize + frisbeeRadius;
+        }
+        bounced = true;
+      }
+    });
+
+    return bounced;
+  };
+
   // ===== RESET GAME =====
   const resetGame = () => {
     chargingStateRef.current.isCharging = false;
@@ -754,6 +821,9 @@ const FrisbeeQuestV2 = () => {
             newState.frisbee.x += newState.frisbee.vx;
             newState.frisbee.z += newState.frisbee.vz;
 
+            // Physik: Abprallen von Wänden und Hindernissen
+            handleFrisbeeBounce(newState.frisbee);
+
             const dx = newState.frisbee.x - newState.frisbee.startX;
             const dz = newState.frisbee.z - newState.frisbee.startZ;
             const distanceFromStart = Math.sqrt(dx * dx + dz * dz);
@@ -806,6 +876,9 @@ const FrisbeeQuestV2 = () => {
           if (!newFrisbee.returning) {
             newFrisbee.x += newFrisbee.vx;
             newFrisbee.z += newFrisbee.vz;
+
+            // Physik: Abprallen von Wänden und Hindernissen
+            handleFrisbeeBounce(newFrisbee);
 
             const dx = newFrisbee.x - newFrisbee.startX;
             const dz = newFrisbee.z - newFrisbee.startZ;
