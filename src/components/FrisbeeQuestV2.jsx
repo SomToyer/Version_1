@@ -250,7 +250,7 @@ const FrisbeeQuestV2 = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [gameState, showControls, game.frisbee.active]);
+  }, [gameState, showControls]);
 
   // ===== GAMEPAD SUPPORT =====
   useEffect(() => {
@@ -320,7 +320,7 @@ const FrisbeeQuestV2 = () => {
     }, 100);
 
     return () => clearInterval(gamepadInterval);
-  }, [gameState, game.frisbee.active, game.frisbee2.active]);
+  }, [gameState]);
 
   // ===== THREE.JS SETUP =====
   useEffect(() => {
@@ -808,6 +808,37 @@ const FrisbeeQuestV2 = () => {
     });
 
     return bounced;
+  };
+
+  // Frisbee-zu-Frisbee Kollision
+  const checkFrisbeeCollision = (frisbee1, frisbee2) => {
+    if (!frisbee1.active || !frisbee2.active || frisbee1.returning || frisbee2.returning) return false;
+
+    const dx = frisbee1.x - frisbee2.x;
+    const dz = frisbee1.z - frisbee2.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    const collisionDistance = 0.6; // Beide Frisbees haben Radius 0.3
+
+    if (distance < collisionDistance) {
+      // Elastische Kollision - tausche Geschwindigkeiten
+      const tempVx = frisbee1.vx;
+      const tempVz = frisbee1.vz;
+      frisbee1.vx = frisbee2.vx;
+      frisbee1.vz = frisbee2.vz;
+      frisbee2.vx = tempVx;
+      frisbee2.vz = tempVz;
+
+      // Separiere Frisbees, damit sie nicht stecken bleiben
+      const angle = Math.atan2(dz, dx);
+      const separationDist = (collisionDistance - distance) / 2;
+      frisbee1.x += Math.cos(angle) * separationDist;
+      frisbee1.z += Math.sin(angle) * separationDist;
+      frisbee2.x -= Math.cos(angle) * separationDist;
+      frisbee2.z -= Math.sin(angle) * separationDist;
+
+      return true;
+    }
+    return false;
   };
 
   // ===== RESET GAME =====
@@ -1336,6 +1367,27 @@ const FrisbeeQuestV2 = () => {
 
           return newFrisbee;
         });
+
+        // Frisbee-zu-Frisbee Kollisionen
+        // Player 1 vs Player 2
+        checkFrisbeeCollision(newState.frisbee, newState.frisbee2);
+
+        // Player 1 vs Enemy Frisbees
+        newState.enemyFrisbees.forEach((enemyFrisbee) => {
+          checkFrisbeeCollision(newState.frisbee, enemyFrisbee);
+        });
+
+        // Player 2 vs Enemy Frisbees
+        newState.enemyFrisbees.forEach((enemyFrisbee) => {
+          checkFrisbeeCollision(newState.frisbee2, enemyFrisbee);
+        });
+
+        // Enemy Frisbees untereinander
+        for (let i = 0; i < newState.enemyFrisbees.length; i++) {
+          for (let j = i + 1; j < newState.enemyFrisbees.length; j++) {
+            checkFrisbeeCollision(newState.enemyFrisbees[i], newState.enemyFrisbees[j]);
+          }
+        }
 
         // Win condition
         if (newState.enemies.every(e => !e.alive)) {
