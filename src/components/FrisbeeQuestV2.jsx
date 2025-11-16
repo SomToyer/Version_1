@@ -937,6 +937,24 @@ const FrisbeeQuestV2 = () => {
             } else {
               newState.frisbee.x += (dx / distance) * newState.frisbee.speed;
               newState.frisbee.z += (dz / distance) * newState.frisbee.speed;
+
+              // Schaden auch beim Rückflug
+              newState.enemies.forEach((enemy, index) => {
+                if (enemy.alive && checkCollision(newState.frisbee, enemy, 1)) {
+                  // Explosive effect - kill all nearby enemies
+                  if (newState.player.powerUps.includes('EXPLOSIVE')) {
+                    newState.enemies.forEach((e, i) => {
+                      if (e.alive && checkCollision(enemy, e, 3)) {
+                        newState.enemies[i] = { ...e, alive: false };
+                        newState.score += 100;
+                      }
+                    });
+                  } else {
+                    newState.enemies[index] = { ...enemy, alive: false };
+                    newState.score += 100;
+                  }
+                }
+              });
             }
           }
         }
@@ -989,6 +1007,20 @@ const FrisbeeQuestV2 = () => {
             } else {
               newFrisbee.x += (dx / distance) * newFrisbee.speed;
               newFrisbee.z += (dz / distance) * newFrisbee.speed;
+
+              // Schaden auch beim Rückflug
+              if (checkCollision(newFrisbee, newState.player, 1)) {
+                // Shield blocks one hit
+                if (newState.player.hasShield) {
+                  newState.player.powerUps = newState.player.powerUps.filter(p => p !== 'SHIELD');
+                  newState.player.hasShield = false;
+                } else {
+                  newState.player.health -= 1;
+                  if (newState.player.health <= 0) {
+                    setGameState('GAME_OVER');
+                  }
+                }
+              }
             }
           }
 
@@ -1072,7 +1104,7 @@ const FrisbeeQuestV2 = () => {
       frisbeeRef.current.visible = game.frisbee.active;
       if (game.frisbee.active) {
         frisbeeRef.current.position.set(game.frisbee.x, game.frisbee.y, game.frisbee.z);
-        frisbeeRef.current.rotation.x += 0.3;
+        frisbeeRef.current.rotation.y += 0.3; // Rotation über Y-Achse (wie echte Frisbee)
         frisbeeRef.current.material.color.setHex(game.frisbee.color);
       }
     }
@@ -1082,7 +1114,7 @@ const FrisbeeQuestV2 = () => {
         enemyFrisbeesRef.current[index].visible = frisbee.active;
         if (frisbee.active) {
           enemyFrisbeesRef.current[index].position.set(frisbee.x, frisbee.y, frisbee.z);
-          enemyFrisbeesRef.current[index].rotation.x += 0.3;
+          enemyFrisbeesRef.current[index].rotation.y += 0.3; // Rotation über Y-Achse
         }
       }
     });
