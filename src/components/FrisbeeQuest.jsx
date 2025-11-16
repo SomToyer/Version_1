@@ -35,7 +35,8 @@ const FrisbeeQuest = () => {
       z: -3,
       speed: 0.1, // Langsamer als Spieler
       lastThrowTime: 0,
-      throwCooldown: 3000 // 3 Sekunden zwischen Würfen
+      throwCooldown: 3000, // 3 Sekunden zwischen Würfen
+      alive: true
     },
     enemyFrisbee: {
       active: false,
@@ -275,40 +276,42 @@ const FrisbeeQuest = () => {
         }
 
         // ===== GEGNER KI =====
-        // Bewegt sich langsam in Richtung Spieler
-        const dxToPlayer = newState.player.x - newState.enemy.x;
-        const dzToPlayer = newState.player.z - newState.enemy.z;
-        const distanceToPlayer = Math.sqrt(dxToPlayer * dxToPlayer + dzToPlayer * dzToPlayer);
+        if (newState.enemy.alive) {
+          // Bewegt sich langsam in Richtung Spieler
+          const dxToPlayer = newState.player.x - newState.enemy.x;
+          const dzToPlayer = newState.player.z - newState.enemy.z;
+          const distanceToPlayer = Math.sqrt(dxToPlayer * dxToPlayer + dzToPlayer * dzToPlayer);
 
-        if (distanceToPlayer > 3) { // Hält Abstand von 3 Einheiten
-          newState.enemy.x += (dxToPlayer / distanceToPlayer) * newState.enemy.speed;
-          newState.enemy.z += (dzToPlayer / distanceToPlayer) * newState.enemy.speed;
-        }
+          if (distanceToPlayer > 3) { // Hält Abstand von 3 Einheiten
+            newState.enemy.x += (dxToPlayer / distanceToPlayer) * newState.enemy.speed;
+            newState.enemy.z += (dzToPlayer / distanceToPlayer) * newState.enemy.speed;
+          }
 
-        // Gegner wirft Frisbee in Richtung Spieler
-        const currentTime = Date.now();
-        if (!newState.enemyFrisbee.active &&
-            currentTime - newState.enemy.lastThrowTime > newState.enemy.throwCooldown &&
-            distanceToPlayer < 10) { // Wirft nur wenn Spieler in Reichweite
+          // Gegner wirft Frisbee in Richtung Spieler
+          const currentTime = Date.now();
+          if (!newState.enemyFrisbee.active &&
+              currentTime - newState.enemy.lastThrowTime > newState.enemy.throwCooldown &&
+              distanceToPlayer < 10) { // Wirft nur wenn Spieler in Reichweite
 
-          const throwDirection = {
-            x: dxToPlayer / distanceToPlayer,
-            z: dzToPlayer / distanceToPlayer
-          };
+            const throwDirection = {
+              x: dxToPlayer / distanceToPlayer,
+              z: dzToPlayer / distanceToPlayer
+            };
 
-          newState.enemyFrisbee = {
-            ...newState.enemyFrisbee,
-            active: true,
-            x: newState.enemy.x,
-            z: newState.enemy.z,
-            startX: newState.enemy.x,
-            startZ: newState.enemy.z,
-            vx: throwDirection.x * newState.enemyFrisbee.speed,
-            vz: throwDirection.z * newState.enemyFrisbee.speed,
-            returning: false
-          };
+            newState.enemyFrisbee = {
+              ...newState.enemyFrisbee,
+              active: true,
+              x: newState.enemy.x,
+              z: newState.enemy.z,
+              startX: newState.enemy.x,
+              startZ: newState.enemy.z,
+              vx: throwDirection.x * newState.enemyFrisbee.speed,
+              vz: throwDirection.z * newState.enemyFrisbee.speed,
+              returning: false
+            };
 
-          newState.enemy.lastThrowTime = currentTime;
+            newState.enemy.lastThrowTime = currentTime;
+          }
         }
 
         // Frisbee Update (Spieler)
@@ -333,8 +336,9 @@ const FrisbeeQuest = () => {
             }
 
             // Gegner treffen
-            if (checkCollision(newState.frisbee, newState.enemy, 1)) {
+            if (newState.enemy.alive && checkCollision(newState.frisbee, newState.enemy, 1)) {
               newState.frisbee.returning = true;
+              newState.enemy.alive = false; // Gegner stirbt
             }
           }
 
@@ -419,6 +423,7 @@ const FrisbeeQuest = () => {
     if (enemyRef.current) {
       enemyRef.current.position.x = gameState.enemy.x;
       enemyRef.current.position.z = gameState.enemy.z;
+      enemyRef.current.visible = gameState.enemy.alive; // Unsichtbar wenn tot
     }
 
     if (frisbeeRef.current) {
@@ -468,6 +473,9 @@ const FrisbeeQuest = () => {
         )}
         {gameState.playerHit && (
           <p className="text-orange-500 font-bold text-lg">⚠️ Von Gegner getroffen! ⚠️</p>
+        )}
+        {!gameState.enemy.alive && (
+          <p className="text-green-500 font-bold text-xl">💀 Gegner besiegt! 💀</p>
         )}
         {gameState.levelComplete && (
           <p className="text-yellow-400 text-2xl font-bold">🎉 LEVEL GESCHAFFT! 🎉</p>
