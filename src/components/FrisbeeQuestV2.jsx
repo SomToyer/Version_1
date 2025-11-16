@@ -440,12 +440,13 @@ const FrisbeeQuestV2 = () => {
     scene.add(playerFrisbeeVisual);
     playerFrisbeeRef.current = playerFrisbeeVisual;
 
-    // Player 2 - Donut Sprite
-    const player2 = new THREE.Sprite(spriteMaterial.clone());
-    player2.material = new THREE.SpriteMaterial({
-      map: donutTexture,
+    // Player 2 - Burger Sprite
+    const burgerTexture = textureLoader.load('/assets/Burgerplayer.png');
+    const player2SpriteMaterial = new THREE.SpriteMaterial({
+      map: burgerTexture,
       transparent: true
     });
+    const player2 = new THREE.Sprite(player2SpriteMaterial);
     player2.scale.set(1.5, 1.5, 1);
     player2.position.set(-10, 0.75, 5);
     scene.add(player2);
