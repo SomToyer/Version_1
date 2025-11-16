@@ -22,6 +22,7 @@ const FrisbeeQuestV2 = () => {
   const enemyFrisbeesRef = useRef([]);
   const obstaclesRef = useRef([]);
   const powerUpMeshesRef = useRef([]);
+  const chargeArrowRef = useRef(null);
 
   const [gameState, setGameState] = useState('MENU');
   const [showControls, setShowControls] = useState(false);
@@ -36,7 +37,9 @@ const FrisbeeQuestV2 = () => {
       maxHealth: 3,
       powerUps: [], // Max 3
       hasShield: false,
-      lastMoveDirection: { x: 1, z: 0 } // Richtung in die der Spieler schaut
+      lastMoveDirection: { x: 1, z: 0 }, // Richtung in die der Spieler schaut
+      charging: false,
+      chargeTime: 0
     },
     frisbee: {
       active: false,
@@ -70,6 +73,7 @@ const FrisbeeQuestV2 = () => {
 
   const keysPressed = useRef({});
   const gamepadRef = useRef(null);
+  const gamepadButtonState = useRef({ throwButton: false });
 
   // ===== SPAWN POWER-UP =====
   const spawnPowerUp = () => {
@@ -168,7 +172,17 @@ const FrisbeeQuestV2 = () => {
       }
 
       if (gameState === 'PLAYING' && e.key === ' ') {
-        throwFrisbeeForward();
+        // Start charging
+        if (!game.frisbee.active && !game.player.charging) {
+          setGame(prev => ({
+            ...prev,
+            player: {
+              ...prev.player,
+              charging: true,
+              chargeTime: 0
+            }
+          }));
+        }
       }
 
       if (gameState === 'GAME_OVER' && e.key === 'r') {
@@ -178,6 +192,19 @@ const FrisbeeQuestV2 = () => {
 
     const handleKeyUp = (e) => {
       keysPressed.current[e.key.toLowerCase()] = false;
+
+      // Release throw
+      if (gameState === 'PLAYING' && e.key === ' ' && game.player.charging) {
+        throwFrisbeeForward(game.player.chargeTime);
+        setGame(prev => ({
+          ...prev,
+          player: {
+            ...prev.player,
+            charging: false,
+            chargeTime: 0
+          }
+        }));
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -294,6 +321,15 @@ const FrisbeeQuestV2 = () => {
     scene.add(player);
     playerRef.current = player;
 
+    // Charge Arrow (initially hidden)
+    const arrowGeometry = new THREE.ConeGeometry(0.3, 1, 8);
+    const arrowMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const chargeArrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+    chargeArrow.rotation.x = Math.PI / 2; // Point forward
+    chargeArrow.visible = false;
+    scene.add(chargeArrow);
+    chargeArrowRef.current = chargeArrow;
+
     // Enemies - Chillybot Sprites
     const enemyPositions = [
       { x: 8, z: -4 },
@@ -377,12 +413,19 @@ const FrisbeeQuestV2 = () => {
   }, [game.powerUps]);
 
   // ===== THROW FRISBEE =====
-  const throwFrisbeeForward = () => {
+  const throwFrisbeeForward = (chargeTime = 0) => {
     if (game.frisbee.active || gameState !== 'PLAYING') return;
 
     setGame(prev => {
       const direction = prev.player.lastMoveDirection;
       const multiCount = prev.player.powerUps.includes('MULTI') ? 3 : 1;
+
+      // Berechne Wurfweite basierend auf Ladezeit (0-2 Sekunden)
+      const maxChargeTime = 2000; // 2 Sekunden max
+      const chargeRatio = Math.min(chargeTime / maxChargeTime, 1);
+      const minDistance = 4;
+      const maxDistance = 15;
+      const throwDistance = minDistance + (maxDistance - minDistance) * chargeRatio;
 
       // For now, just throw one frisbee (Multi can be expanded later)
       return {
@@ -396,7 +439,8 @@ const FrisbeeQuestV2 = () => {
           startZ: prev.player.z,
           vx: direction.x * prev.frisbee.speed,
           vz: direction.z * prev.frisbee.speed,
-          returning: false
+          returning: false,
+          maxDistance: throwDistance
         }
       };
     });
@@ -421,7 +465,9 @@ const FrisbeeQuestV2 = () => {
         maxHealth: 3,
         powerUps: [],
         hasShield: false,
-        lastMoveDirection: { x: 1, z: 0 }
+        lastMoveDirection: { x: 1, z: 0 },
+        charging: false,
+        chargeTime: 0
       },
       frisbee: {
         active: false,
@@ -463,6 +509,11 @@ const FrisbeeQuestV2 = () => {
       setGame(prev => {
         let newState = { ...prev };
 
+        // Charge Time Update
+        if (newState.player.charging) {
+          newState.player.chargeTime = Math.min(newState.player.chargeTime + 33, 2000); // Max 2 Sekunden
+        }
+
         // Player Movement
         const keys = keysPressed.current;
         let moveX = 0;
@@ -479,9 +530,22 @@ const FrisbeeQuestV2 = () => {
           if (Math.abs(axes[0]) > 0.15) moveX += axes[0];
           if (Math.abs(axes[1]) > 0.15) moveZ += axes[1];
 
-          if (gamepadRef.current.buttons[0]?.pressed && !newState.frisbee.active) {
-            throwFrisbeeForward();
+          const throwButtonPressed = gamepadRef.current.buttons[0]?.pressed;
+
+          // Button gerade gedrückt -> Start charging
+          if (throwButtonPressed && !gamepadButtonState.current.throwButton && !newState.frisbee.active && !newState.player.charging) {
+            newState.player.charging = true;
+            newState.player.chargeTime = 0;
           }
+
+          // Button losgelassen -> Werfen
+          if (!throwButtonPressed && gamepadButtonState.current.throwButton && newState.player.charging) {
+            throwFrisbeeForward(newState.player.chargeTime);
+            newState.player.charging = false;
+            newState.player.chargeTime = 0;
+          }
+
+          gamepadButtonState.current.throwButton = throwButtonPressed;
         }
 
         const length = Math.sqrt(moveX * moveX + moveZ * moveZ);
@@ -699,6 +763,30 @@ const FrisbeeQuestV2 = () => {
         playerRef.current.material.color.setHex(0x4169e1);
       } else {
         playerRef.current.material.color.setHex(0xffffff);
+      }
+    }
+
+    // Charge Arrow Update
+    if (chargeArrowRef.current) {
+      if (game.player.charging) {
+        chargeArrowRef.current.visible = true;
+
+        // Position vor dem Spieler
+        const direction = game.player.lastMoveDirection;
+        const distance = 2 + (game.player.chargeTime / 2000) * 3; // 2-5 Einheiten
+        chargeArrowRef.current.position.x = game.player.x + direction.x * distance;
+        chargeArrowRef.current.position.z = game.player.z + direction.z * distance;
+        chargeArrowRef.current.position.y = 0.75;
+
+        // Rotation in Wurfrichtung
+        const angle = Math.atan2(direction.x, direction.z);
+        chargeArrowRef.current.rotation.y = -angle;
+
+        // Skalierung basierend auf Ladezeit
+        const scale = 0.5 + (game.player.chargeTime / 2000) * 1.5; // 0.5-2.0
+        chargeArrowRef.current.scale.set(scale, scale, scale);
+      } else {
+        chargeArrowRef.current.visible = false;
       }
     }
 
