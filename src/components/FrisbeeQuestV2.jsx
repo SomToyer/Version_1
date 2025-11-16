@@ -89,6 +89,7 @@ const FrisbeeQuestV2 = () => {
   const keysPressed = useRef({});
   const gamepadRef = useRef(null);
   const gamepadButtonState = useRef({ throwButton: false });
+  const chargingStateRef = useRef({ isCharging: false, chargeTime: 0 });
 
   // ===== SPAWN POWER-UP =====
   const spawnPowerUp = () => {
@@ -188,7 +189,9 @@ const FrisbeeQuestV2 = () => {
 
       if (gameState === 'PLAYING' && e.key === ' ') {
         // Start charging
-        if (!game.frisbee.active && !game.player.charging) {
+        if (!game.frisbee.active && !chargingStateRef.current.isCharging) {
+          chargingStateRef.current.isCharging = true;
+          chargingStateRef.current.chargeTime = 0;
           setGame(prev => ({
             ...prev,
             player: {
@@ -209,8 +212,12 @@ const FrisbeeQuestV2 = () => {
       keysPressed.current[e.key.toLowerCase()] = false;
 
       // Release throw
-      if (gameState === 'PLAYING' && e.key === ' ' && game.player.charging) {
-        throwFrisbeeForward(game.player.chargeTime);
+      if (gameState === 'PLAYING' && e.key === ' ' && chargingStateRef.current.isCharging) {
+        const chargeTime = chargingStateRef.current.chargeTime;
+        chargingStateRef.current.isCharging = false;
+        chargingStateRef.current.chargeTime = 0;
+
+        throwFrisbeeForward(chargeTime);
         setGame(prev => ({
           ...prev,
           player: {
@@ -470,6 +477,8 @@ const FrisbeeQuestV2 = () => {
 
   // ===== RESET GAME =====
   const resetGame = () => {
+    chargingStateRef.current.isCharging = false;
+    chargingStateRef.current.chargeTime = 0;
     setGame({
       player: {
         x: -10,
@@ -542,6 +551,7 @@ const FrisbeeQuestV2 = () => {
         // Charge Time Update
         if (newState.player.charging) {
           newState.player.chargeTime = Math.min(newState.player.chargeTime + 33, 2000); // Max 2 Sekunden
+          chargingStateRef.current.chargeTime = newState.player.chargeTime;
         }
 
         // Player Movement
@@ -563,14 +573,19 @@ const FrisbeeQuestV2 = () => {
           const throwButtonPressed = gamepadRef.current.buttons[0]?.pressed;
 
           // Button gerade gedrückt -> Start charging
-          if (throwButtonPressed && !gamepadButtonState.current.throwButton && !newState.frisbee.active && !newState.player.charging) {
+          if (throwButtonPressed && !gamepadButtonState.current.throwButton && !newState.frisbee.active && !chargingStateRef.current.isCharging) {
+            chargingStateRef.current.isCharging = true;
+            chargingStateRef.current.chargeTime = 0;
             newState.player.charging = true;
             newState.player.chargeTime = 0;
           }
 
           // Button losgelassen -> Werfen
-          if (!throwButtonPressed && gamepadButtonState.current.throwButton && newState.player.charging) {
-            throwFrisbeeForward(newState.player.chargeTime);
+          if (!throwButtonPressed && gamepadButtonState.current.throwButton && chargingStateRef.current.isCharging) {
+            const chargeTime = chargingStateRef.current.chargeTime;
+            chargingStateRef.current.isCharging = false;
+            chargingStateRef.current.chargeTime = 0;
+            throwFrisbeeForward(chargeTime);
             newState.player.charging = false;
             newState.player.chargeTime = 0;
           }
