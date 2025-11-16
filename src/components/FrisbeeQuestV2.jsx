@@ -59,21 +59,21 @@ const FrisbeeQuestV2 = () => {
     },
     enemies: [
       {
-        x: 8, z: -4, homeX: 8, homeZ: -4, speed: 0.12, alive: true, health: 1,
-        lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 5,
-        patrolPoints: [{ x: 8, z: -6 }, { x: 10, z: -4 }, { x: 8, z: -2 }, { x: 6, z: -4 }],
+        x: 16, z: -8, homeX: 16, homeZ: -8, speed: 0.12, alive: true, health: 1,
+        lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 10,
+        patrolPoints: [{ x: 16, z: -12 }, { x: 20, z: -8 }, { x: 16, z: -4 }, { x: 12, z: -8 }],
         currentPatrolIndex: 0
       },
       {
-        x: 10, z: 2, homeX: 10, homeZ: 2, speed: 0.12, alive: true, health: 1,
-        lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 5,
-        patrolPoints: [{ x: 10, z: 0 }, { x: 12, z: 2 }, { x: 10, z: 4 }, { x: 8, z: 2 }],
+        x: 20, z: 4, homeX: 20, homeZ: 4, speed: 0.12, alive: true, health: 1,
+        lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 10,
+        patrolPoints: [{ x: 20, z: 0 }, { x: 24, z: 4 }, { x: 20, z: 8 }, { x: 16, z: 4 }],
         currentPatrolIndex: 0
       },
       {
-        x: 6, z: 0, homeX: 6, homeZ: 0, speed: 0.12, alive: true, health: 1,
-        lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 5,
-        patrolPoints: [{ x: 4, z: 0 }, { x: 6, z: 2 }, { x: 8, z: 0 }, { x: 6, z: -2 }],
+        x: 12, z: 0, homeX: 12, homeZ: 0, speed: 0.12, alive: true, health: 1,
+        lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 10,
+        patrolPoints: [{ x: 8, z: 0 }, { x: 12, z: 4 }, { x: 16, z: 0 }, { x: 12, z: -4 }],
         currentPatrolIndex: 0
       }
     ],
@@ -97,9 +97,9 @@ const FrisbeeQuestV2 = () => {
     const types = Object.keys(POWER_UP_TYPES);
     const randomType = types[Math.floor(Math.random() * types.length)];
 
-    // Random position in arena
-    const x = Math.random() * 20 - 10;
-    const z = Math.random() * 14 - 7;
+    // Random position in arena (4x größer)
+    const x = Math.random() * 40 - 20;
+    const z = Math.random() * 28 - 14;
 
     setGame(prev => ({
       ...prev,
@@ -276,11 +276,11 @@ const FrisbeeQuestV2 = () => {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x2a2a2a);
-    scene.fog = new THREE.Fog(0x2a2a2a, 20, 50);
+    scene.fog = new THREE.Fog(0x2a2a2a, 40, 100); // Weiter für größere Arena
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(50, 800 / 600, 0.1, 1000);
-    camera.position.set(-10, 8, 6); // Start bei Spieler-Position
+    camera.position.set(-10, 16, 12); // Start bei Spieler-Position (höher für größere Arena)
     camera.lookAt(-10, 0, 0);
     cameraRef.current = camera;
 
@@ -293,21 +293,21 @@ const FrisbeeQuestV2 = () => {
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(10, 30, 10);
+    directionalLight.position.set(20, 60, 20); // Höher für größere Arena
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
     // Texture Loader
     const textureLoader = new THREE.TextureLoader();
 
-    // Arena Floor with Grasland texture
+    // Arena Floor with Grasland texture (4x größer)
     const graslandTexture = textureLoader.load('/assets/Grasland.png');
     graslandTexture.wrapS = THREE.RepeatWrapping;
     graslandTexture.wrapT = THREE.RepeatWrapping;
-    graslandTexture.repeat.set(10, 7); // Wiederhole Textur für besseres Aussehen
+    graslandTexture.repeat.set(20, 14); // Wiederhole Textur für größere Arena
 
     const arenaFloor = new THREE.Mesh(
-      new THREE.BoxGeometry(30, 0.5, 20),
+      new THREE.BoxGeometry(60, 0.5, 40),
       new THREE.MeshLambertMaterial({ map: graslandTexture })
     );
     arenaFloor.position.y = -0.25;
@@ -316,34 +316,38 @@ const FrisbeeQuestV2 = () => {
 
     // Walls
     const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
-    const northWall = new THREE.Mesh(new THREE.BoxGeometry(30, 3, 0.5), wallMaterial);
-    northWall.position.set(0, 1.5, -10);
+    const northWall = new THREE.Mesh(new THREE.BoxGeometry(60, 3, 0.5), wallMaterial);
+    northWall.position.set(0, 1.5, -20);
     northWall.castShadow = true;
     scene.add(northWall);
 
-    const southWall = new THREE.Mesh(new THREE.BoxGeometry(30, 3, 0.5), wallMaterial);
-    southWall.position.set(0, 1.5, 10);
+    const southWall = new THREE.Mesh(new THREE.BoxGeometry(60, 3, 0.5), wallMaterial);
+    southWall.position.set(0, 1.5, 20);
     southWall.castShadow = true;
     scene.add(southWall);
 
-    const westWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3, 20), wallMaterial);
-    westWall.position.set(-15, 1.5, 0);
+    const westWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3, 40), wallMaterial);
+    westWall.position.set(-30, 1.5, 0);
     westWall.castShadow = true;
     scene.add(westWall);
 
-    const eastWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3, 20), wallMaterial);
-    eastWall.position.set(15, 1.5, 0);
+    const eastWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3, 40), wallMaterial);
+    eastWall.position.set(30, 1.5, 0);
     eastWall.castShadow = true;
     scene.add(eastWall);
 
-    // Obstacles - Baum1 Sprites
+    // Obstacles - Baum1 Sprites (weiter verteilt für größere Arena)
     obstaclesRef.current = [];
     const obstaclePositions = [
       { x: 0, z: 0 },
-      { x: -5, z: -5 },
-      { x: 5, z: 5 },
-      { x: -5, z: 5 },
-      { x: 5, z: -5 }
+      { x: -10, z: -10 },
+      { x: 10, z: 10 },
+      { x: -10, z: 10 },
+      { x: 10, z: -10 },
+      { x: -15, z: 0 },
+      { x: 15, z: 0 },
+      { x: 0, z: -12 },
+      { x: 0, z: 12 }
     ];
 
     const baum1Texture = textureLoader.load('/assets/Baum1.png');
@@ -525,24 +529,24 @@ const FrisbeeQuestV2 = () => {
     const frisbeeRadius = 0.3;
     let bounced = false;
 
-    // Arena-Wände (mit kleinem Puffer)
-    if (frisbee.x <= -14.5) {
-      frisbee.x = -14.5;
+    // Arena-Wände (mit kleinem Puffer) - 4x größere Arena
+    if (frisbee.x <= -29.5) {
+      frisbee.x = -29.5;
       frisbee.vx = Math.abs(frisbee.vx); // Nach rechts abprallen
       bounced = true;
     }
-    if (frisbee.x >= 14.5) {
-      frisbee.x = 14.5;
+    if (frisbee.x >= 29.5) {
+      frisbee.x = 29.5;
       frisbee.vx = -Math.abs(frisbee.vx); // Nach links abprallen
       bounced = true;
     }
-    if (frisbee.z <= -9.5) {
-      frisbee.z = -9.5;
+    if (frisbee.z <= -19.5) {
+      frisbee.z = -19.5;
       frisbee.vz = Math.abs(frisbee.vz); // Nach unten abprallen
       bounced = true;
     }
-    if (frisbee.z >= 9.5) {
-      frisbee.z = 9.5;
+    if (frisbee.z >= 19.5) {
+      frisbee.z = 19.5;
       frisbee.vz = -Math.abs(frisbee.vz); // Nach oben abprallen
       bounced = true;
     }
@@ -624,21 +628,21 @@ const FrisbeeQuestV2 = () => {
       },
       enemies: [
         {
-          x: 8, z: -4, homeX: 8, homeZ: -4, speed: 0.12, alive: true, health: 1,
-          lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 5,
-          patrolPoints: [{ x: 8, z: -6 }, { x: 10, z: -4 }, { x: 8, z: -2 }, { x: 6, z: -4 }],
+          x: 16, z: -8, homeX: 16, homeZ: -8, speed: 0.12, alive: true, health: 1,
+          lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 10,
+          patrolPoints: [{ x: 16, z: -12 }, { x: 20, z: -8 }, { x: 16, z: -4 }, { x: 12, z: -8 }],
           currentPatrolIndex: 0
         },
         {
-          x: 10, z: 2, homeX: 10, homeZ: 2, speed: 0.12, alive: true, health: 1,
-          lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 5,
-          patrolPoints: [{ x: 10, z: 0 }, { x: 12, z: 2 }, { x: 10, z: 4 }, { x: 8, z: 2 }],
+          x: 20, z: 4, homeX: 20, homeZ: 4, speed: 0.12, alive: true, health: 1,
+          lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 10,
+          patrolPoints: [{ x: 20, z: 0 }, { x: 24, z: 4 }, { x: 20, z: 8 }, { x: 16, z: 4 }],
           currentPatrolIndex: 0
         },
         {
-          x: 6, z: 0, homeX: 6, homeZ: 0, speed: 0.12, alive: true, health: 1,
-          lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 5,
-          patrolPoints: [{ x: 4, z: 0 }, { x: 6, z: 2 }, { x: 8, z: 0 }, { x: 6, z: -2 }],
+          x: 12, z: 0, homeX: 12, homeZ: 0, speed: 0.12, alive: true, health: 1,
+          lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 10,
+          patrolPoints: [{ x: 8, z: 0 }, { x: 12, z: 4 }, { x: 16, z: 0 }, { x: 12, z: -4 }],
           currentPatrolIndex: 0
         }
       ],
@@ -729,8 +733,8 @@ const FrisbeeQuestV2 = () => {
           newState.player.z = newZ;
         }
 
-        newState.player.x = Math.max(-14, Math.min(14, newState.player.x));
-        newState.player.z = Math.max(-9, Math.min(9, newState.player.z));
+        newState.player.x = Math.max(-29, Math.min(29, newState.player.x));
+        newState.player.z = Math.max(-19, Math.min(19, newState.player.z));
 
         // Check power-up collision
         newState.powerUps = newState.powerUps.filter(powerUp => {
@@ -1006,9 +1010,9 @@ const FrisbeeQuestV2 = () => {
       }
     }
 
-    // Kamera folgt Spieler
+    // Kamera folgt Spieler (höher für größere Arena)
     if (cameraRef.current && playerRef.current) {
-      const cameraOffset = { x: 0, y: 8, z: 6 }; // Offset hinter und über dem Spieler
+      const cameraOffset = { x: 0, y: 16, z: 12 }; // Höher und weiter weg für größere Arena
       cameraRef.current.position.x = game.player.x + cameraOffset.x;
       cameraRef.current.position.y = cameraOffset.y;
       cameraRef.current.position.z = game.player.z + cameraOffset.z;
