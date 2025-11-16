@@ -297,10 +297,15 @@ const FrisbeeQuestV2 = () => {
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
-    // Arena Floor
+    // Arena Floor with Grasland texture
+    const graslandTexture = textureLoader.load('/assets/Grasland.png');
+    graslandTexture.wrapS = THREE.RepeatWrapping;
+    graslandTexture.wrapT = THREE.RepeatWrapping;
+    graslandTexture.repeat.set(10, 7); // Wiederhole Textur für besseres Aussehen
+
     const arenaFloor = new THREE.Mesh(
       new THREE.BoxGeometry(30, 0.5, 20),
-      new THREE.MeshLambertMaterial({ color: 0x4a4a4a })
+      new THREE.MeshLambertMaterial({ map: graslandTexture })
     );
     arenaFloor.position.y = -0.25;
     arenaFloor.receiveShadow = true;
