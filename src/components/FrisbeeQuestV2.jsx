@@ -17,7 +17,9 @@ const FrisbeeQuestV2 = () => {
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
   const playerRef = useRef(null);
+  const player2Ref = useRef(null);
   const frisbeeRef = useRef(null);
+  const frisbee2Ref = useRef(null);
   const enemiesRef = useRef([]);
   const enemyFrisbeesRef = useRef([]);
   const obstaclesRef = useRef([]);
@@ -42,6 +44,20 @@ const FrisbeeQuestV2 = () => {
       meleeing: false, // Schlag-Animation
       meleeTime: 0
     },
+    player2: {
+      x: -10,
+      z: 5,
+      speed: 0.2,
+      baseSpeed: 0.2,
+      health: 3,
+      maxHealth: 3,
+      powerUps: [], // Max 3
+      hasShield: false,
+      lastMoveDirection: { x: 1, z: 0 },
+      currentVelocity: { x: 0, z: 0 },
+      meleeing: false,
+      meleeTime: 0
+    },
     frisbee: {
       active: false,
       x: 0,
@@ -53,6 +69,22 @@ const FrisbeeQuestV2 = () => {
       speed: 0.25,
       baseSpeed: 0.25,
       color: 0x00ff00,
+      startX: 0,
+      startZ: 0,
+      maxDistance: 6,
+      baseMaxDistance: 6
+    },
+    frisbee2: {
+      active: false,
+      x: 0,
+      y: 1,
+      z: 0,
+      vx: 0,
+      vz: 0,
+      returning: false,
+      speed: 0.25,
+      baseSpeed: 0.25,
+      color: 0xff00ff,
       startX: 0,
       startZ: 0,
       maxDistance: 6,
@@ -91,11 +123,15 @@ const FrisbeeQuestV2 = () => {
   });
 
   const keysPressed = useRef({});
-  const gamepadRef = useRef(null);
+  const gamepad1Ref = useRef(null);
+  const gamepad2Ref = useRef(null);
   const gamepadButtonState = useRef({ throwButton: false, meleeButton: false });
-  const playerFrisbeeRef = useRef(null); // Frisbee-Visual am Spieler
+  const gamepad2ButtonState = useRef({ throwButton: false, meleeButton: false });
+  const playerFrisbeeRef = useRef(null); // Frisbee-Visual am Spieler 1
+  const player2FrisbeeRef = useRef(null); // Frisbee-Visual am Spieler 2
   const enemyFrisbeeVisuals = useRef([]); // Frisbee-Visuals an Gegnern
-  const meleeSwingProgress = useRef(0); // 0-1 für Schwing-Animation
+  const meleeSwingProgress = useRef(0); // 0-1 für Schwing-Animation Player 1
+  const meleeSwingProgress2 = useRef(0); // 0-1 für Schwing-Animation Player 2
 
   // ===== SPAWN POWER-UP =====
   const spawnPowerUp = () => {
@@ -218,50 +254,73 @@ const FrisbeeQuestV2 = () => {
 
   // ===== GAMEPAD SUPPORT =====
   useEffect(() => {
-    const lastButtonState = { X: false, A: false, B: false };
+    const lastButtonState1 = { X: false, A: false, B: false };
+    const lastButtonState2 = { X: false, A: false, B: false };
 
     const gamepadInterval = setInterval(() => {
       const gamepads = navigator.getGamepads();
-      if (gamepads[0]) {
-        gamepadRef.current = gamepads[0];
 
-        // X-Button (Button 2) - Start/Neustart
+      // Gamepad 1 (Player 1)
+      if (gamepads[0]) {
+        gamepad1Ref.current = gamepads[0];
+
         const xButtonPressed = gamepads[0].buttons[2]?.pressed;
-        // A-Button (Button 0) - Werfen
         const aButtonPressed = gamepads[0].buttons[0]?.pressed;
-        // B-Button (Button 1) - Nahkampf
         const bButtonPressed = gamepads[0].buttons[1]?.pressed;
 
         // Spielstart im Menü
-        if (gameState === 'MENU' && xButtonPressed && !lastButtonState.X) {
+        if (gameState === 'MENU' && xButtonPressed && !lastButtonState1.X) {
           setGameState('PLAYING');
           setTimeout(() => spawnPowerUp(), 2000);
           setTimeout(() => spawnPowerUp(), 4000);
         }
 
         // Neustart bei Game Over
-        if (gameState === 'GAME_OVER' && xButtonPressed && !lastButtonState.X) {
+        if (gameState === 'GAME_OVER' && xButtonPressed && !lastButtonState1.X) {
           resetGame();
         }
 
         // A-Button: Werfen
-        if (gameState === 'PLAYING' && aButtonPressed && !lastButtonState.A) {
+        if (gameState === 'PLAYING' && aButtonPressed && !lastButtonState1.A) {
           throwFrisbeeForward();
         }
 
         // B-Button: Nahkampf
-        if (gameState === 'PLAYING' && bButtonPressed && !lastButtonState.B) {
+        if (gameState === 'PLAYING' && bButtonPressed && !lastButtonState1.B) {
           performMelee();
         }
 
-        lastButtonState.X = xButtonPressed;
-        lastButtonState.A = aButtonPressed;
-        lastButtonState.B = bButtonPressed;
+        lastButtonState1.X = xButtonPressed;
+        lastButtonState1.A = aButtonPressed;
+        lastButtonState1.B = bButtonPressed;
+      }
+
+      // Gamepad 2 (Player 2)
+      if (gamepads[1]) {
+        gamepad2Ref.current = gamepads[1];
+
+        const xButtonPressed = gamepads[1].buttons[2]?.pressed;
+        const aButtonPressed = gamepads[1].buttons[0]?.pressed;
+        const bButtonPressed = gamepads[1].buttons[1]?.pressed;
+
+        // A-Button: Werfen
+        if (gameState === 'PLAYING' && aButtonPressed && !lastButtonState2.A) {
+          throwFrisbeeForwardP2();
+        }
+
+        // B-Button: Nahkampf
+        if (gameState === 'PLAYING' && bButtonPressed && !lastButtonState2.B) {
+          performMeleeP2();
+        }
+
+        lastButtonState2.X = xButtonPressed;
+        lastButtonState2.A = aButtonPressed;
+        lastButtonState2.B = bButtonPressed;
       }
     }, 100);
 
     return () => clearInterval(gamepadInterval);
-  }, [gameState, game.frisbee.active]);
+  }, [gameState, game.frisbee.active, game.frisbee2.active]);
 
   // ===== THREE.JS SETUP =====
   useEffect(() => {
@@ -381,6 +440,27 @@ const FrisbeeQuestV2 = () => {
     scene.add(playerFrisbeeVisual);
     playerFrisbeeRef.current = playerFrisbeeVisual;
 
+    // Player 2 - Donut Sprite
+    const player2 = new THREE.Sprite(spriteMaterial.clone());
+    player2.material = new THREE.SpriteMaterial({
+      map: donutTexture,
+      transparent: true
+    });
+    player2.scale.set(1.5, 1.5, 1);
+    player2.position.set(-10, 0.75, 5);
+    scene.add(player2);
+    player2Ref.current = player2;
+
+    // Player 2 Frisbee Visual
+    const player2FrisbeeGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.08, 16);
+    const player2FrisbeeMaterial = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+    const player2FrisbeeVisual = new THREE.Mesh(player2FrisbeeGeometry, player2FrisbeeMaterial);
+    player2FrisbeeVisual.position.set(-10 + 0.6, 0.75, 5);
+    player2FrisbeeVisual.rotation.x = Math.PI / 2;
+    player2FrisbeeVisual.castShadow = true;
+    scene.add(player2FrisbeeVisual);
+    player2FrisbeeRef.current = player2FrisbeeVisual;
+
     // Enemies - Chillybot Sprites
     const enemyPositions = [
       { x: 8, z: -4 },
@@ -422,6 +502,16 @@ const FrisbeeQuestV2 = () => {
     frisbee.castShadow = true;
     scene.add(frisbee);
     frisbeeRef.current = frisbee;
+
+    // Frisbee 2 (Player 2)
+    const frisbee2 = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16),
+      new THREE.MeshLambertMaterial({ color: 0xff00ff })
+    );
+    frisbee2.visible = false;
+    frisbee2.castShadow = true;
+    scene.add(frisbee2);
+    frisbee2Ref.current = frisbee2;
 
     // Enemy Frisbees
     enemyFrisbeesRef.current = [];
@@ -552,6 +642,84 @@ const FrisbeeQuestV2 = () => {
     }, swingDuration);
   };
 
+  // ===== PLAYER 2 THROW FRISBEE =====
+  const throwFrisbeeForwardP2 = () => {
+    if (game.frisbee2.active || gameState !== 'PLAYING') return;
+
+    setGame(prev => {
+      const direction = prev.player2.lastMoveDirection;
+      const velocity = prev.player2.currentVelocity;
+
+      // Kombiniere Wurfgeschwindigkeit mit Spielerbewegung
+      const throwVx = direction.x * prev.frisbee2.speed + velocity.x;
+      const throwVz = direction.z * prev.frisbee2.speed + velocity.z;
+
+      return {
+        ...prev,
+        frisbee2: {
+          ...prev.frisbee2,
+          active: true,
+          x: prev.player2.x,
+          z: prev.player2.z,
+          startX: prev.player2.x,
+          startZ: prev.player2.z,
+          vx: throwVx,
+          vz: throwVz,
+          returning: false
+        }
+      };
+    });
+  };
+
+  // ===== PLAYER 2 MELEE ATTACK =====
+  const performMeleeP2 = () => {
+    if (gameState !== 'PLAYING' || game.player2.meleeing) return;
+
+    // Starte Schwing-Animation
+    meleeSwingProgress2.current = 0;
+    const swingDuration = 200; // 200ms
+    const swingInterval = setInterval(() => {
+      meleeSwingProgress2.current += 0.1;
+      if (meleeSwingProgress2.current >= 1) {
+        meleeSwingProgress2.current = 0;
+        clearInterval(swingInterval);
+      }
+    }, 16);
+
+    setGame(prev => {
+      const newState = { ...prev };
+      newState.player2.meleeing = true;
+      newState.player2.meleeTime = 0;
+
+      // Prüfe Nahkampf-Treffer auf Gegner
+      const meleeRange = 1.5;
+      const direction = prev.player2.lastMoveDirection;
+      const meleeX = prev.player2.x + direction.x * meleeRange;
+      const meleeZ = prev.player2.z + direction.z * meleeRange;
+
+      newState.enemies = newState.enemies.map(enemy => {
+        if (!enemy.alive) return enemy;
+        const distance = Math.sqrt(
+          (enemy.x - meleeX) ** 2 + (enemy.z - meleeZ) ** 2
+        );
+        if (distance < 1) {
+          return { ...enemy, alive: false };
+        }
+        return enemy;
+      });
+
+      return newState;
+    });
+
+    // Beende Schlag-Animation nach 200ms
+    setTimeout(() => {
+      setGame(prev => ({
+        ...prev,
+        player2: { ...prev.player2, meleeing: false, meleeTime: 0 }
+      }));
+    }, swingDuration);
+  };
+
   // ===== COLLISION =====
   const checkCollision = (obj1, obj2, radius = 1) => {
     const dx = obj1.x - obj2.x;
@@ -658,6 +826,20 @@ const FrisbeeQuestV2 = () => {
         meleeing: false,
         meleeTime: 0
       },
+      player2: {
+        x: -10,
+        z: 5,
+        speed: 0.2,
+        baseSpeed: 0.2,
+        health: 3,
+        maxHealth: 3,
+        powerUps: [],
+        hasShield: false,
+        lastMoveDirection: { x: 1, z: 0 },
+        currentVelocity: { x: 0, z: 0 },
+        meleeing: false,
+        meleeTime: 0
+      },
       frisbee: {
         active: false,
         x: 0,
@@ -669,6 +851,22 @@ const FrisbeeQuestV2 = () => {
         speed: 0.25,
         baseSpeed: 0.25,
         color: 0x00ff00,
+        startX: 0,
+        startZ: 0,
+        maxDistance: 6,
+        baseMaxDistance: 6
+      },
+      frisbee2: {
+        active: false,
+        x: 0,
+        y: 1,
+        z: 0,
+        vx: 0,
+        vz: 0,
+        returning: false,
+        speed: 0.25,
+        baseSpeed: 0.25,
+        color: 0xff00ff,
         startX: 0,
         startZ: 0,
         maxDistance: 6,
@@ -726,9 +924,9 @@ const FrisbeeQuestV2 = () => {
         if (keys['a'] || keys['arrowleft']) moveX -= 1;
         if (keys['d'] || keys['arrowright']) moveX += 1;
 
-        // Gamepad
-        if (gamepadRef.current) {
-          const axes = gamepadRef.current.axes;
+        // Gamepad 1
+        if (gamepad1Ref.current) {
+          const axes = gamepad1Ref.current.axes;
           if (Math.abs(axes[0]) > 0.15) moveX += axes[0];
           if (Math.abs(axes[1]) > 0.15) moveZ += axes[1];
         }
@@ -820,6 +1018,44 @@ const FrisbeeQuestV2 = () => {
           }
           return true;
         });
+
+        // Player 2 Movement
+        let move2X = 0;
+        let move2Z = 0;
+
+        // Gamepad 2
+        if (gamepad2Ref.current) {
+          const axes = gamepad2Ref.current.axes;
+          if (Math.abs(axes[0]) > 0.15) move2X += axes[0];
+          if (Math.abs(axes[1]) > 0.15) move2Z += axes[1];
+        }
+
+        const length2 = Math.sqrt(move2X * move2X + move2Z * move2Z);
+        if (length2 > 0) {
+          move2X = (move2X / length2) * newState.player2.speed;
+          move2Z = (move2Z / length2) * newState.player2.speed;
+
+          newState.player2.lastMoveDirection = {
+            x: move2X / newState.player2.speed,
+            z: move2Z / newState.player2.speed
+          };
+
+          newState.player2.currentVelocity = { x: move2X, z: move2Z };
+        } else {
+          newState.player2.currentVelocity = { x: 0, z: 0 };
+        }
+
+        // Check obstacle collision for player 2
+        const new2X = newState.player2.x + move2X;
+        const new2Z = newState.player2.z + move2Z;
+
+        if (!checkObstacleCollision(new2X, new2Z, 0.5)) {
+          newState.player2.x = new2X;
+          newState.player2.z = new2Z;
+        }
+
+        newState.player2.x = Math.max(-29, Math.min(29, newState.player2.x));
+        newState.player2.z = Math.max(-19, Math.min(19, newState.player2.z));
 
         // Enemy AI - Patrol and Territory Defense
         newState.enemies = newState.enemies.map((enemy, index) => {
@@ -984,6 +1220,54 @@ const FrisbeeQuestV2 = () => {
           }
         }
 
+        // Frisbee 2 Update (Player 2)
+        if (newState.frisbee2.active) {
+          if (!newState.frisbee2.returning) {
+            newState.frisbee2.x += newState.frisbee2.vx;
+            newState.frisbee2.z += newState.frisbee2.vz;
+
+            handleFrisbeeBounce(newState.frisbee2);
+
+            const dx = newState.frisbee2.x - newState.frisbee2.startX;
+            const dz = newState.frisbee2.z - newState.frisbee2.startZ;
+            const distanceFromStart = Math.sqrt(dx * dx + dz * dz);
+
+            if (distanceFromStart >= newState.frisbee2.maxDistance) {
+              newState.frisbee2.returning = true;
+            }
+
+            // Enemy hit
+            newState.enemies.forEach((enemy, index) => {
+              if (enemy.alive && checkCollision(newState.frisbee2, enemy, 1)) {
+                newState.frisbee2.returning = true;
+                newState.enemies[index] = { ...enemy, alive: false };
+                newState.score += 100;
+              }
+            });
+          }
+
+          if (newState.frisbee2.returning) {
+            const dx = newState.player2.x - newState.frisbee2.x;
+            const dz = newState.player2.z - newState.frisbee2.z;
+            const distance = Math.sqrt(dx * dx + dz * dz);
+
+            if (distance < 0.5) {
+              newState.frisbee2.active = false;
+            } else {
+              newState.frisbee2.x += (dx / distance) * newState.frisbee2.speed;
+              newState.frisbee2.z += (dz / distance) * newState.frisbee2.speed;
+
+              // Schaden auch beim Rückflug
+              newState.enemies.forEach((enemy, index) => {
+                if (enemy.alive && checkCollision(newState.frisbee2, enemy, 1)) {
+                  newState.enemies[index] = { ...enemy, alive: false };
+                  newState.score += 100;
+                }
+              });
+            }
+          }
+        }
+
         // Enemy Frisbees
         newState.enemyFrisbees = newState.enemyFrisbees.map((frisbee, index) => {
           if (!frisbee.active) return frisbee;
@@ -1107,6 +1391,42 @@ const FrisbeeQuestV2 = () => {
       playerFrisbeeRef.current.visible = true;
     }
 
+    // Player 2
+    if (player2Ref.current) {
+      player2Ref.current.position.x = game.player2.x;
+      player2Ref.current.position.z = game.player2.z;
+
+      if (game.player2.hasShield) {
+        player2Ref.current.material.color.setHex(0x4169e1);
+      } else {
+        player2Ref.current.material.color.setHex(0xffffff);
+      }
+    }
+
+    // Player 2 Frisbee Visual
+    if (player2FrisbeeRef.current && !game.frisbee2.active) {
+      const direction = game.player2.lastMoveDirection;
+      const rightX = -direction.z;
+      const rightZ = direction.x;
+
+      let swingOffsetX = 0;
+      let swingOffsetZ = 0;
+      if (game.player2.meleeing && meleeSwingProgress2.current > 0) {
+        const swingDistance = Math.sin(meleeSwingProgress2.current * Math.PI) * 1.2;
+        swingOffsetX = direction.x * swingDistance;
+        swingOffsetZ = direction.z * swingDistance;
+      }
+
+      player2FrisbeeRef.current.position.x = game.player2.x + rightX * 0.6 + swingOffsetX;
+      player2FrisbeeRef.current.position.z = game.player2.z + rightZ * 0.6 + swingOffsetZ;
+      player2FrisbeeRef.current.material.color.setHex(game.frisbee2.color);
+    }
+    if (player2FrisbeeRef.current && game.frisbee2.active) {
+      player2FrisbeeRef.current.visible = false;
+    } else if (player2FrisbeeRef.current) {
+      player2FrisbeeRef.current.visible = true;
+    }
+
     // Kamera folgt Spieler (höher für größere Arena)
     if (cameraRef.current && playerRef.current) {
       const cameraOffset = { x: 0, y: 16, z: 12 }; // Höher und weiter weg für größere Arena
@@ -1141,6 +1461,14 @@ const FrisbeeQuestV2 = () => {
       if (game.frisbee.active) {
         frisbeeRef.current.position.set(game.frisbee.x, game.frisbee.y, game.frisbee.z);
         frisbeeRef.current.material.color.setHex(game.frisbee.color);
+      }
+    }
+
+    if (frisbee2Ref.current) {
+      frisbee2Ref.current.visible = game.frisbee2.active;
+      if (game.frisbee2.active) {
+        frisbee2Ref.current.position.set(game.frisbee2.x, game.frisbee2.y, game.frisbee2.z);
+        frisbee2Ref.current.material.color.setHex(game.frisbee2.color);
       }
     }
 
@@ -1250,7 +1578,10 @@ const FrisbeeQuestV2 = () => {
         <div className="mt-4 w-full max-w-4xl">
           <div className="flex justify-between text-white text-xl mb-2">
             <div className="bg-gray-800 px-6 py-3 rounded-lg">
-              <span className="font-bold text-red-500">❤️ Health:</span> {game.player.health}/{game.player.maxHealth}
+              <span className="font-bold text-green-500">P1 ❤️:</span> {game.player.health}/{game.player.maxHealth}
+            </div>
+            <div className="bg-gray-800 px-6 py-3 rounded-lg">
+              <span className="font-bold text-purple-500">P2 ❤️:</span> {game.player2.health}/{game.player2.maxHealth}
             </div>
             <div className="bg-gray-800 px-6 py-3 rounded-lg">
               <span className="font-bold text-yellow-400">⭐ Score:</span> {game.score}
