@@ -58,9 +58,24 @@ const FrisbeeQuestV2 = () => {
       baseMaxDistance: 6
     },
     enemies: [
-      { x: 8, z: -4, homeX: 8, homeZ: -4, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 5 },
-      { x: 10, z: 2, homeX: 10, homeZ: 2, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 5 },
-      { x: 6, z: 0, homeX: 6, homeZ: 0, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 5 }
+      {
+        x: 8, z: -4, homeX: 8, homeZ: -4, speed: 0.12, alive: true, health: 1,
+        lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 5,
+        patrolPoints: [{ x: 8, z: -6 }, { x: 10, z: -4 }, { x: 8, z: -2 }, { x: 6, z: -4 }],
+        currentPatrolIndex: 0
+      },
+      {
+        x: 10, z: 2, homeX: 10, homeZ: 2, speed: 0.12, alive: true, health: 1,
+        lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 5,
+        patrolPoints: [{ x: 10, z: 0 }, { x: 12, z: 2 }, { x: 10, z: 4 }, { x: 8, z: 2 }],
+        currentPatrolIndex: 0
+      },
+      {
+        x: 6, z: 0, homeX: 6, homeZ: 0, speed: 0.12, alive: true, health: 1,
+        lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 5,
+        patrolPoints: [{ x: 4, z: 0 }, { x: 6, z: 2 }, { x: 8, z: 0 }, { x: 6, z: -2 }],
+        currentPatrolIndex: 0
+      }
     ],
     enemyFrisbees: [
       { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
@@ -486,9 +501,24 @@ const FrisbeeQuestV2 = () => {
         baseMaxDistance: 6
       },
       enemies: [
-        { x: 8, z: -4, homeX: 8, homeZ: -4, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 5 },
-        { x: 10, z: 2, homeX: 10, homeZ: 2, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 5 },
-        { x: 6, z: 0, homeX: 6, homeZ: 0, speed: 0.12, alive: true, health: 1, lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 5 }
+        {
+          x: 8, z: -4, homeX: 8, homeZ: -4, speed: 0.12, alive: true, health: 1,
+          lastMoveDirection: { x: 0, z: 1 }, territoryRadius: 5,
+          patrolPoints: [{ x: 8, z: -6 }, { x: 10, z: -4 }, { x: 8, z: -2 }, { x: 6, z: -4 }],
+          currentPatrolIndex: 0
+        },
+        {
+          x: 10, z: 2, homeX: 10, homeZ: 2, speed: 0.12, alive: true, health: 1,
+          lastMoveDirection: { x: -1, z: 0 }, territoryRadius: 5,
+          patrolPoints: [{ x: 10, z: 0 }, { x: 12, z: 2 }, { x: 10, z: 4 }, { x: 8, z: 2 }],
+          currentPatrolIndex: 0
+        },
+        {
+          x: 6, z: 0, homeX: 6, homeZ: 0, speed: 0.12, alive: true, health: 1,
+          lastMoveDirection: { x: 1, z: 0 }, territoryRadius: 5,
+          patrolPoints: [{ x: 4, z: 0 }, { x: 6, z: 2 }, { x: 8, z: 0 }, { x: 6, z: -2 }],
+          currentPatrolIndex: 0
+        }
       ],
       enemyFrisbees: [
         { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
@@ -577,7 +607,7 @@ const FrisbeeQuestV2 = () => {
           return true;
         });
 
-        // Enemy AI - Territory Defense
+        // Enemy AI - Patrol and Territory Defense
         newState.enemies = newState.enemies.map((enemy, index) => {
           if (!enemy.alive) return enemy;
 
@@ -585,10 +615,6 @@ const FrisbeeQuestV2 = () => {
           const dxToPlayer = newState.player.x - enemy.x;
           const dzToPlayer = newState.player.z - enemy.z;
           const distanceToPlayer = Math.sqrt(dxToPlayer * dxToPlayer + dzToPlayer * dzToPlayer);
-
-          const dxToHome = enemy.homeX - enemy.x;
-          const dzToHome = enemy.homeZ - enemy.z;
-          const distanceToHome = Math.sqrt(dxToHome * dxToHome + dzToHome * dzToHome);
 
           let moveX = 0;
           let moveZ = 0;
@@ -617,10 +643,19 @@ const FrisbeeQuestV2 = () => {
               };
             }
           } else {
-            // Zurück zur Heimatposition
-            if (distanceToHome > 0.5) {
-              moveX = (dxToHome / distanceToHome) * enemy.speed;
-              moveZ = (dzToHome / distanceToHome) * enemy.speed;
+            // Patrouille - Laufe zu aktuellem Wegpunkt
+            const currentPoint = enemy.patrolPoints[enemy.currentPatrolIndex];
+            const dxToPoint = currentPoint.x - enemy.x;
+            const dzToPoint = currentPoint.z - enemy.z;
+            const distanceToPoint = Math.sqrt(dxToPoint * dxToPoint + dzToPoint * dzToPoint);
+
+            if (distanceToPoint < 0.5) {
+              // Wegpunkt erreicht - gehe zum nächsten
+              newEnemy.currentPatrolIndex = (enemy.currentPatrolIndex + 1) % enemy.patrolPoints.length;
+            } else {
+              // Bewege dich zum Wegpunkt
+              moveX = (dxToPoint / distanceToPoint) * enemy.speed;
+              moveZ = (dzToPoint / distanceToPoint) * enemy.speed;
             }
           }
 
