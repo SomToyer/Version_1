@@ -49,8 +49,8 @@ const FrisbeeQuestV2 = () => {
       vx: 0,
       vz: 0,
       returning: false,
-      speed: 0.4,
-      baseSpeed: 0.4,
+      speed: 0.25,
+      baseSpeed: 0.25,
       color: 0x00ff00,
       startX: 0,
       startZ: 0,
@@ -78,9 +78,9 @@ const FrisbeeQuestV2 = () => {
       }
     ],
     enemyFrisbees: [
-      { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
-      { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
-      { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 }
+      { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.18, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
+      { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.18, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
+      { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.18, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 }
     ],
     powerUps: [], // Spawned power-ups in arena
     score: 0
@@ -612,8 +612,8 @@ const FrisbeeQuestV2 = () => {
         vx: 0,
         vz: 0,
         returning: false,
-        speed: 0.4,
-        baseSpeed: 0.4,
+        speed: 0.25,
+        baseSpeed: 0.25,
         color: 0x00ff00,
         startX: 0,
         startZ: 0,
@@ -641,9 +641,9 @@ const FrisbeeQuestV2 = () => {
         }
       ],
       enemyFrisbees: [
-        { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
-        { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
-        { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.3, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 }
+        { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.18, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
+        { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.18, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 },
+        { active: false, x: 0, y: 1, z: 0, vx: 0, vz: 0, returning: false, speed: 0.18, color: 0xff00ff, startX: 0, startZ: 0, maxDistance: 5 }
       ],
       powerUps: [],
       score: 0
