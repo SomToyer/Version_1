@@ -7,8 +7,8 @@ const FrisbeeQuest = () => {
   const playerRef = useRef(null);
   const frisbeeRef = useRef(null);
   const chestRef = useRef(null);
-  const enemyRef = useRef(null);
-  const enemyFrisbeeRef = useRef(null);
+  const enemiesRef = useRef([]);
+  const enemyFrisbeesRef = useRef([]);
 
   const [gameState, setGameState] = useState({
     player: {
@@ -30,26 +30,70 @@ const FrisbeeQuest = () => {
       startZ: 0,
       maxDistance: 5 // Maximale Flugdistanz in Metern
     },
-    enemy: {
-      x: 5,
-      z: -3,
-      speed: 0.1, // Langsamer als Spieler
-      alive: true
-    },
-    enemyFrisbee: {
-      active: false,
-      x: 0,
-      y: 1,
-      z: 0,
-      vx: 0,
-      vz: 0,
-      returning: false,
-      speed: 0.25,
-      color: 0xff00ff, // Magenta
-      startX: 0,
-      startZ: 0,
-      maxDistance: 4 // Etwas kürzer als Spieler
-    },
+    enemies: [
+      {
+        x: 5,
+        z: -3,
+        speed: 0.1,
+        alive: true
+      },
+      {
+        x: 8,
+        z: 2,
+        speed: 0.1,
+        alive: true
+      },
+      {
+        x: 3,
+        z: 0,
+        speed: 0.1,
+        alive: true
+      }
+    ],
+    enemyFrisbees: [
+      {
+        active: false,
+        x: 0,
+        y: 1,
+        z: 0,
+        vx: 0,
+        vz: 0,
+        returning: false,
+        speed: 0.25,
+        color: 0xff00ff,
+        startX: 0,
+        startZ: 0,
+        maxDistance: 4
+      },
+      {
+        active: false,
+        x: 0,
+        y: 1,
+        z: 0,
+        vx: 0,
+        vz: 0,
+        returning: false,
+        speed: 0.25,
+        color: 0xff00ff,
+        startX: 0,
+        startZ: 0,
+        maxDistance: 4
+      },
+      {
+        active: false,
+        x: 0,
+        y: 1,
+        z: 0,
+        vx: 0,
+        vz: 0,
+        returning: false,
+        speed: 0.25,
+        color: 0xff00ff,
+        startX: 0,
+        startZ: 0,
+        maxDistance: 4
+      }
+    ],
     chest: {
       x: 0,
       z: 0,
@@ -151,15 +195,24 @@ const FrisbeeQuest = () => {
     scene.add(player);
     playerRef.current = player;
 
-    // ===== GEGNER =====
-    const enemy = new THREE.Mesh(
-      new THREE.ConeGeometry(0.5, 1.5, 4),
-      new THREE.MeshLambertMaterial({ color: 0xff4444 }) // Rot
-    );
-    enemy.position.set(5, 1, -3);
-    enemy.rotation.y = Math.PI / 4;
-    scene.add(enemy);
-    enemyRef.current = enemy;
+    // ===== 3 GEGNER =====
+    const enemyPositions = [
+      { x: 5, z: -3 },
+      { x: 8, z: 2 },
+      { x: 3, z: 0 }
+    ];
+
+    enemiesRef.current = [];
+    enemyPositions.forEach((pos) => {
+      const enemy = new THREE.Mesh(
+        new THREE.ConeGeometry(0.5, 1.5, 4),
+        new THREE.MeshLambertMaterial({ color: 0xff4444 })
+      );
+      enemy.position.set(pos.x, 1, pos.z);
+      enemy.rotation.y = Math.PI / 4;
+      scene.add(enemy);
+      enemiesRef.current.push(enemy);
+    });
 
     // ===== TRUHE =====
     const chest = new THREE.Group();
@@ -190,14 +243,17 @@ const FrisbeeQuest = () => {
     scene.add(frisbee);
     frisbeeRef.current = frisbee;
 
-    // ===== ENEMY FRISBEE =====
-    const enemyFrisbee = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16),
-      new THREE.MeshLambertMaterial({ color: 0xff00ff }) // Magenta
-    );
-    enemyFrisbee.visible = false;
-    scene.add(enemyFrisbee);
-    enemyFrisbeeRef.current = enemyFrisbee;
+    // ===== 3 ENEMY FRISBEES =====
+    enemyFrisbeesRef.current = [];
+    for (let i = 0; i < 3; i++) {
+      const enemyFrisbee = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16),
+        new THREE.MeshLambertMaterial({ color: 0xff00ff })
+      );
+      enemyFrisbee.visible = false;
+      scene.add(enemyFrisbee);
+      enemyFrisbeesRef.current.push(enemyFrisbee);
+    }
 
     // ===== ANIMATION LOOP =====
     const animate = () => {
@@ -273,39 +329,44 @@ const FrisbeeQuest = () => {
           newState.skillUnlocked = true;
         }
 
-        // ===== GEGNER KI =====
-        if (newState.enemy.alive) {
+        // ===== GEGNER KI (für alle 3) =====
+        newState.enemies = newState.enemies.map((enemy, index) => {
+          if (!enemy.alive) return enemy;
+
+          const newEnemy = { ...enemy };
+
           // Bewegt sich langsam in Richtung Spieler
-          const dxToPlayer = newState.player.x - newState.enemy.x;
-          const dzToPlayer = newState.player.z - newState.enemy.z;
+          const dxToPlayer = newState.player.x - enemy.x;
+          const dzToPlayer = newState.player.z - enemy.z;
           const distanceToPlayer = Math.sqrt(dxToPlayer * dxToPlayer + dzToPlayer * dzToPlayer);
 
           if (distanceToPlayer > 3) { // Hält Abstand von 3 Einheiten
-            newState.enemy.x += (dxToPlayer / distanceToPlayer) * newState.enemy.speed;
-            newState.enemy.z += (dzToPlayer / distanceToPlayer) * newState.enemy.speed;
+            newEnemy.x += (dxToPlayer / distanceToPlayer) * enemy.speed;
+            newEnemy.z += (dzToPlayer / distanceToPlayer) * enemy.speed;
           }
 
-          // Gegner wirft Frisbee in Richtung Spieler (wie Spieler - sobald Frisbee zurück ist)
-          if (!newState.enemyFrisbee.active && distanceToPlayer < 10) { // Wirft nur wenn Spieler in Reichweite
-
+          // Gegner wirft Frisbee in Richtung Spieler
+          if (!newState.enemyFrisbees[index].active && distanceToPlayer < 10) {
             const throwDirection = {
               x: dxToPlayer / distanceToPlayer,
               z: dzToPlayer / distanceToPlayer
             };
 
-            newState.enemyFrisbee = {
-              ...newState.enemyFrisbee,
+            newState.enemyFrisbees[index] = {
+              ...newState.enemyFrisbees[index],
               active: true,
-              x: newState.enemy.x,
-              z: newState.enemy.z,
-              startX: newState.enemy.x,
-              startZ: newState.enemy.z,
-              vx: throwDirection.x * newState.enemyFrisbee.speed,
-              vz: throwDirection.z * newState.enemyFrisbee.speed,
+              x: enemy.x,
+              z: enemy.z,
+              startX: enemy.x,
+              startZ: enemy.z,
+              vx: throwDirection.x * newState.enemyFrisbees[index].speed,
+              vz: throwDirection.z * newState.enemyFrisbees[index].speed,
               returning: false
             };
           }
-        }
+
+          return newEnemy;
+        });
 
         // Frisbee Update (Spieler)
         if (newState.frisbee.active) {
@@ -328,11 +389,13 @@ const FrisbeeQuest = () => {
               newState.frisbee.returning = true;
             }
 
-            // Gegner treffen
-            if (newState.enemy.alive && checkCollision(newState.frisbee, newState.enemy, 1)) {
-              newState.frisbee.returning = true;
-              newState.enemy.alive = false; // Gegner stirbt
-            }
+            // Gegner treffen (alle 3 prüfen)
+            newState.enemies.forEach((enemy, index) => {
+              if (enemy.alive && checkCollision(newState.frisbee, enemy, 1)) {
+                newState.frisbee.returning = true;
+                newState.enemies[index] = { ...enemy, alive: false };
+              }
+            });
           }
 
           // Zurück zum Spieler
@@ -350,48 +413,54 @@ const FrisbeeQuest = () => {
           }
         }
 
-        // Enemy Frisbee Update
-        if (newState.enemyFrisbee.active) {
-          if (!newState.enemyFrisbee.returning) {
-            newState.enemyFrisbee.x += newState.enemyFrisbee.vx;
-            newState.enemyFrisbee.z += newState.enemyFrisbee.vz;
+        // Enemy Frisbees Update (alle 3)
+        newState.enemyFrisbees = newState.enemyFrisbees.map((frisbee, index) => {
+          if (!frisbee.active) return frisbee;
+
+          const newFrisbee = { ...frisbee };
+
+          if (!newFrisbee.returning) {
+            newFrisbee.x += newFrisbee.vx;
+            newFrisbee.z += newFrisbee.vz;
 
             // Distanz vom Startpunkt berechnen
-            const dx = newState.enemyFrisbee.x - newState.enemyFrisbee.startX;
-            const dz = newState.enemyFrisbee.z - newState.enemyFrisbee.startZ;
+            const dx = newFrisbee.x - newFrisbee.startX;
+            const dz = newFrisbee.z - newFrisbee.startZ;
             const distanceFromStart = Math.sqrt(dx * dx + dz * dz);
 
             // Wenn maximale Distanz erreicht, zurückkommen
-            if (distanceFromStart >= newState.enemyFrisbee.maxDistance) {
-              newState.enemyFrisbee.returning = true;
+            if (distanceFromStart >= newFrisbee.maxDistance) {
+              newFrisbee.returning = true;
             }
 
             // Außerhalb Spielfeld
-            if (Math.abs(newState.enemyFrisbee.x) > 25 || Math.abs(newState.enemyFrisbee.z) > 10) {
-              newState.enemyFrisbee.returning = true;
+            if (Math.abs(newFrisbee.x) > 25 || Math.abs(newFrisbee.z) > 10) {
+              newFrisbee.returning = true;
             }
 
             // Spieler treffen
-            if (checkCollision(newState.enemyFrisbee, newState.player, 1)) {
-              newState.enemyFrisbee.returning = true;
+            if (checkCollision(newFrisbee, newState.player, 1)) {
+              newFrisbee.returning = true;
               newState.playerHit = true;
             }
           }
 
           // Zurück zum Gegner
-          if (newState.enemyFrisbee.returning) {
-            const dx = newState.enemy.x - newState.enemyFrisbee.x;
-            const dz = newState.enemy.z - newState.enemyFrisbee.z;
+          if (newFrisbee.returning) {
+            const dx = newState.enemies[index].x - newFrisbee.x;
+            const dz = newState.enemies[index].z - newFrisbee.z;
             const distance = Math.sqrt(dx * dx + dz * dz);
 
             if (distance < 0.5) {
-              newState.enemyFrisbee.active = false;
+              newFrisbee.active = false;
             } else {
-              newState.enemyFrisbee.x += (dx / distance) * newState.enemyFrisbee.speed;
-              newState.enemyFrisbee.z += (dz / distance) * newState.enemyFrisbee.speed;
+              newFrisbee.x += (dx / distance) * newFrisbee.speed;
+              newFrisbee.z += (dz / distance) * newFrisbee.speed;
             }
           }
-        }
+
+          return newFrisbee;
+        });
 
         // Ziel erreichen
         if (checkCollision(newState.player, newState.goal, 2)) {
@@ -413,11 +482,14 @@ const FrisbeeQuest = () => {
       playerRef.current.position.z = gameState.player.z;
     }
 
-    if (enemyRef.current) {
-      enemyRef.current.position.x = gameState.enemy.x;
-      enemyRef.current.position.z = gameState.enemy.z;
-      enemyRef.current.visible = gameState.enemy.alive; // Unsichtbar wenn tot
-    }
+    // Update all 3 enemies
+    gameState.enemies.forEach((enemy, index) => {
+      if (enemiesRef.current[index]) {
+        enemiesRef.current[index].position.x = enemy.x;
+        enemiesRef.current[index].position.z = enemy.z;
+        enemiesRef.current[index].visible = enemy.alive;
+      }
+    });
 
     if (frisbeeRef.current) {
       frisbeeRef.current.visible = gameState.frisbee.active;
@@ -432,23 +504,28 @@ const FrisbeeQuest = () => {
       }
     }
 
-    if (enemyFrisbeeRef.current) {
-      enemyFrisbeeRef.current.visible = gameState.enemyFrisbee.active;
-      if (gameState.enemyFrisbee.active) {
-        enemyFrisbeeRef.current.position.set(
-          gameState.enemyFrisbee.x,
-          gameState.enemyFrisbee.y,
-          gameState.enemyFrisbee.z
-        );
-        enemyFrisbeeRef.current.rotation.x += 0.3;
-        enemyFrisbeeRef.current.material.color.setHex(gameState.enemyFrisbee.color);
+    // Update all 3 enemy frisbees
+    gameState.enemyFrisbees.forEach((frisbee, index) => {
+      if (enemyFrisbeesRef.current[index]) {
+        enemyFrisbeesRef.current[index].visible = frisbee.active;
+        if (frisbee.active) {
+          enemyFrisbeesRef.current[index].position.set(
+            frisbee.x,
+            frisbee.y,
+            frisbee.z
+          );
+          enemyFrisbeesRef.current[index].rotation.x += 0.3;
+          enemyFrisbeesRef.current[index].material.color.setHex(frisbee.color);
+        }
       }
-    }
+    });
 
     if (chestRef.current && gameState.chest.opened) {
       chestRef.current.children[0].material.color.setHex(0xdeb887);
     }
   }, [gameState]);
+
+  const allEnemiesDead = gameState.enemies.every(enemy => !enemy.alive);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 p-4">
@@ -467,8 +544,8 @@ const FrisbeeQuest = () => {
         {gameState.playerHit && (
           <p className="text-orange-500 font-bold text-lg">⚠️ Von Gegner getroffen! ⚠️</p>
         )}
-        {!gameState.enemy.alive && (
-          <p className="text-green-500 font-bold text-xl">💀 Gegner besiegt! 💀</p>
+        {allEnemiesDead && (
+          <p className="text-green-500 font-bold text-xl">💀 Alle Gegner besiegt! 💀</p>
         )}
         {gameState.levelComplete && (
           <p className="text-yellow-400 text-2xl font-bold">🎉 LEVEL GESCHAFFT! 🎉</p>
