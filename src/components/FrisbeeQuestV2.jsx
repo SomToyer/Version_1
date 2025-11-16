@@ -280,8 +280,8 @@ const FrisbeeQuestV2 = () => {
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(50, 800 / 600, 0.1, 1000);
-    camera.position.set(0, 35, 15);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(-10, 8, 6); // Start bei Spieler-Position
+    camera.lookAt(-10, 0, 0);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -845,6 +845,15 @@ const FrisbeeQuestV2 = () => {
       } else {
         playerRef.current.material.color.setHex(0xffffff);
       }
+    }
+
+    // Kamera folgt Spieler
+    if (cameraRef.current && playerRef.current) {
+      const cameraOffset = { x: 0, y: 8, z: 6 }; // Offset hinter und über dem Spieler
+      cameraRef.current.position.x = game.player.x + cameraOffset.x;
+      cameraRef.current.position.y = cameraOffset.y;
+      cameraRef.current.position.z = game.player.z + cameraOffset.z;
+      cameraRef.current.lookAt(game.player.x, 0, game.player.z);
     }
 
     // Charge Arrow Update
