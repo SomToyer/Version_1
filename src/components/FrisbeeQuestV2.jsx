@@ -359,7 +359,7 @@ const FrisbeeQuestV2 = () => {
       obstacleSprite.position.set(pos.x, 1.5, pos.z); // Höher positioniert
       scene.add(obstacleSprite);
       obstacleMeshes.push(obstacleSprite);
-      obstaclesRef.current.push({ x: pos.x, z: pos.z, size: 2 });
+      obstaclesRef.current.push({ x: pos.x, z: pos.z, size: 1 }); // Kollisionsbox halb so groß
     });
 
     // Player - Donut Sprite
