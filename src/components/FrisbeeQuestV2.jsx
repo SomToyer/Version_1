@@ -35,7 +35,8 @@ const FrisbeeQuestV2 = () => {
       health: 3,
       maxHealth: 3,
       powerUps: [], // Max 3
-      hasShield: false
+      hasShield: false,
+      lastMoveDirection: { x: 1, z: 0 } // Richtung in die der Spieler schaut
     },
     frisbee: {
       active: false,
@@ -379,9 +380,8 @@ const FrisbeeQuestV2 = () => {
   const throwFrisbeeForward = () => {
     if (game.frisbee.active || gameState !== 'PLAYING') return;
 
-    const direction = { x: 1, z: 0 };
-
     setGame(prev => {
+      const direction = prev.player.lastMoveDirection;
       const multiCount = prev.player.powerUps.includes('MULTI') ? 3 : 1;
 
       // For now, just throw one frisbee (Multi can be expanded later)
@@ -420,7 +420,8 @@ const FrisbeeQuestV2 = () => {
         health: 3,
         maxHealth: 3,
         powerUps: [],
-        hasShield: false
+        hasShield: false,
+        lastMoveDirection: { x: 1, z: 0 }
       },
       frisbee: {
         active: false,
@@ -487,6 +488,12 @@ const FrisbeeQuestV2 = () => {
         if (length > 0) {
           moveX = (moveX / length) * newState.player.speed;
           moveZ = (moveZ / length) * newState.player.speed;
+
+          // Speichere die Bewegungsrichtung für Frisbee-Wurf
+          newState.player.lastMoveDirection = {
+            x: moveX / newState.player.speed,
+            z: moveZ / newState.player.speed
+          };
         }
 
         newState.player.x += moveX;
