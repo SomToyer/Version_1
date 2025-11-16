@@ -38,6 +38,7 @@ const FrisbeeQuestV2 = () => {
       powerUps: [], // Max 3
       hasShield: false,
       lastMoveDirection: { x: 1, z: 0 }, // Richtung in die der Spieler schaut
+      currentVelocity: { x: 0, z: 0 }, // Aktuelle Bewegungsgeschwindigkeit
       meleeing: false, // Schlag-Animation
       meleeTime: 0
     },
@@ -94,6 +95,7 @@ const FrisbeeQuestV2 = () => {
   const gamepadButtonState = useRef({ throwButton: false, meleeButton: false });
   const playerFrisbeeRef = useRef(null); // Frisbee-Visual am Spieler
   const enemyFrisbeeVisuals = useRef([]); // Frisbee-Visuals an Gegnern
+  const meleeSwingProgress = useRef(0); // 0-1 für Schwing-Animation
 
   // ===== SPAWN POWER-UP =====
   const spawnPowerUp = () => {
@@ -478,6 +480,11 @@ const FrisbeeQuestV2 = () => {
 
     setGame(prev => {
       const direction = prev.player.lastMoveDirection;
+      const velocity = prev.player.currentVelocity;
+
+      // Kombiniere Wurfgeschwindigkeit mit Spielerbewegung
+      const throwVx = direction.x * prev.frisbee.speed + velocity.x;
+      const throwVz = direction.z * prev.frisbee.speed + velocity.z;
 
       return {
         ...prev,
@@ -488,8 +495,8 @@ const FrisbeeQuestV2 = () => {
           z: prev.player.z,
           startX: prev.player.x,
           startZ: prev.player.z,
-          vx: direction.x * prev.frisbee.speed,
-          vz: direction.z * prev.frisbee.speed,
+          vx: throwVx,
+          vz: throwVz,
           returning: false
         }
       };
@@ -499,6 +506,17 @@ const FrisbeeQuestV2 = () => {
   // ===== MELEE ATTACK =====
   const performMelee = () => {
     if (gameState !== 'PLAYING' || game.player.meleeing) return;
+
+    // Starte Schwing-Animation
+    meleeSwingProgress.current = 0;
+    const swingDuration = 200; // 200ms
+    const swingInterval = setInterval(() => {
+      meleeSwingProgress.current += 0.1; // 10% pro Frame bei ~60fps
+      if (meleeSwingProgress.current >= 1) {
+        meleeSwingProgress.current = 0;
+        clearInterval(swingInterval);
+      }
+    }, 16);
 
     setGame(prev => {
       const newState = { ...prev };
@@ -531,7 +549,7 @@ const FrisbeeQuestV2 = () => {
         ...prev,
         player: { ...prev.player, meleeing: false, meleeTime: 0 }
       }));
-    }, 200);
+    }, swingDuration);
   };
 
   // ===== COLLISION =====
@@ -636,6 +654,7 @@ const FrisbeeQuestV2 = () => {
         powerUps: [],
         hasShield: false,
         lastMoveDirection: { x: 1, z: 0 },
+        currentVelocity: { x: 0, z: 0 },
         meleeing: false,
         meleeTime: 0
       },
@@ -724,6 +743,12 @@ const FrisbeeQuestV2 = () => {
             x: moveX / newState.player.speed,
             z: moveZ / newState.player.speed
           };
+
+          // Speichere aktuelle Geschwindigkeit
+          newState.player.currentVelocity = { x: moveX, z: moveZ };
+        } else {
+          // Keine Bewegung
+          newState.player.currentVelocity = { x: 0, z: 0 };
         }
 
         // Check obstacle collision before moving
@@ -1060,8 +1085,19 @@ const FrisbeeQuestV2 = () => {
       // Rechts von der Bewegungsrichtung = Perpendicular
       const rightX = -direction.z;
       const rightZ = direction.x;
-      playerFrisbeeRef.current.position.x = game.player.x + rightX * 0.6;
-      playerFrisbeeRef.current.position.z = game.player.z + rightZ * 0.6;
+
+      // Schwing-Animation bei Melee
+      let swingOffsetX = 0;
+      let swingOffsetZ = 0;
+      if (game.player.meleeing && meleeSwingProgress.current > 0) {
+        // Schwinge in Bewegungsrichtung (nach vorne)
+        const swingDistance = Math.sin(meleeSwingProgress.current * Math.PI) * 1.2; // 0 -> 1 -> 0
+        swingOffsetX = direction.x * swingDistance;
+        swingOffsetZ = direction.z * swingDistance;
+      }
+
+      playerFrisbeeRef.current.position.x = game.player.x + rightX * 0.6 + swingOffsetX;
+      playerFrisbeeRef.current.position.z = game.player.z + rightZ * 0.6 + swingOffsetZ;
       playerFrisbeeRef.current.material.color.setHex(game.frisbee.color);
     }
     if (playerFrisbeeRef.current && game.frisbee.active) {
@@ -1104,7 +1140,6 @@ const FrisbeeQuestV2 = () => {
       frisbeeRef.current.visible = game.frisbee.active;
       if (game.frisbee.active) {
         frisbeeRef.current.position.set(game.frisbee.x, game.frisbee.y, game.frisbee.z);
-        frisbeeRef.current.rotation.y += 0.3; // Rotation über Y-Achse (wie echte Frisbee)
         frisbeeRef.current.material.color.setHex(game.frisbee.color);
       }
     }
@@ -1114,7 +1149,6 @@ const FrisbeeQuestV2 = () => {
         enemyFrisbeesRef.current[index].visible = frisbee.active;
         if (frisbee.active) {
           enemyFrisbeesRef.current[index].position.set(frisbee.x, frisbee.y, frisbee.z);
-          enemyFrisbeesRef.current[index].rotation.y += 0.3; // Rotation über Y-Achse
         }
       }
     });
