@@ -293,21 +293,23 @@ const FrisbeeQuestV2 = () => {
     scene.add(player);
     playerRef.current = player;
 
-    // Enemies
+    // Enemies - Chillybot Sprites
     const enemyPositions = [
       { x: 8, z: -4 },
       { x: 10, z: 2 },
       { x: 6, z: 0 }
     ];
 
+    const chillybotTexture = textureLoader.load('/assets/Chillybot.png');
     enemiesRef.current = [];
     enemyPositions.forEach(() => {
-      const enemy = new THREE.Mesh(
-        new THREE.BoxGeometry(0.8, 1.2, 0.8),
-        new THREE.MeshLambertMaterial({ color: 0xff4444 })
-      );
-      enemy.position.y = 0.6;
-      enemy.castShadow = true;
+      const enemySpriteMaterial = new THREE.SpriteMaterial({
+        map: chillybotTexture,
+        transparent: true
+      });
+      const enemy = new THREE.Sprite(enemySpriteMaterial);
+      enemy.scale.set(1.5, 1.5, 1);
+      enemy.position.y = 0.75;
       scene.add(enemy);
       enemiesRef.current.push(enemy);
     });
