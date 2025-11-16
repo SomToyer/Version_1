@@ -733,7 +733,53 @@ const FrisbeeQuestV2 = () => {
         // Check power-up collision
         newState.powerUps = newState.powerUps.filter(powerUp => {
           if (checkCollision(newState.player, powerUp, 1)) {
-            addPowerUpToPlayer(powerUp.type);
+            // Apply PowerUp directly here instead of calling addPowerUpToPlayer
+            let newPlayerPowerUps = [...newState.player.powerUps];
+            const typeInfo = POWER_UP_TYPES[powerUp.type];
+
+            // Check conflicts (Fire + Ice)
+            const hasConflict = newPlayerPowerUps.some(pu => typeInfo.conflicts.includes(pu));
+            if (hasConflict) {
+              // Remove conflicting power-up
+              newPlayerPowerUps = newPlayerPowerUps.filter(pu => !typeInfo.conflicts.includes(pu));
+            }
+
+            // Max 3 power-ups
+            if (newPlayerPowerUps.length >= 3) {
+              newPlayerPowerUps.shift(); // Remove oldest
+            }
+
+            newPlayerPowerUps.push(powerUp.type);
+
+            // Apply effects to player
+            newState.player.powerUps = newPlayerPowerUps;
+
+            // Speed effect
+            if (newPlayerPowerUps.includes('SPEED')) {
+              newState.player.speed = newState.player.baseSpeed * 1.5;
+            } else {
+              newState.player.speed = newState.player.baseSpeed;
+            }
+
+            // Shield effect
+            newState.player.hasShield = newPlayerPowerUps.includes('SHIELD');
+
+            // Extra Range effect
+            if (newPlayerPowerUps.includes('EXTRA_RANGE')) {
+              newState.frisbee.maxDistance = newState.frisbee.baseMaxDistance * 1.5;
+            } else {
+              newState.frisbee.maxDistance = newState.frisbee.baseMaxDistance;
+            }
+
+            // Fire/Ice color
+            if (newPlayerPowerUps.includes('FIRE')) {
+              newState.frisbee.color = 0xff4500;
+            } else if (newPlayerPowerUps.includes('ICE')) {
+              newState.frisbee.color = 0x00bfff;
+            } else {
+              newState.frisbee.color = 0x00ff00;
+            }
+
             // Spawn new power-up after delay
             setTimeout(() => spawnPowerUp(), 3000);
             return false;
