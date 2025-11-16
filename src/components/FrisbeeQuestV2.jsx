@@ -333,7 +333,10 @@ const FrisbeeQuestV2 = () => {
     eastWall.castShadow = true;
     scene.add(eastWall);
 
-    // Obstacles
+    // Texture Loader
+    const textureLoader = new THREE.TextureLoader();
+
+    // Obstacles - Baum1 Sprites
     obstaclesRef.current = [];
     const obstaclePositions = [
       { x: 0, z: 0 },
@@ -343,20 +346,23 @@ const FrisbeeQuestV2 = () => {
       { x: 5, z: -5 }
     ];
 
+    const baum1Texture = textureLoader.load('/assets/Baum1.png');
+    const obstacleMeshes = [];
+
     obstaclePositions.forEach(pos => {
-      const obstacle = new THREE.Mesh(
-        new THREE.BoxGeometry(2, 2, 2),
-        new THREE.MeshLambertMaterial({ color: 0x8B4513 })
-      );
-      obstacle.position.set(pos.x, 1, pos.z);
-      obstacle.castShadow = true;
-      obstacle.receiveShadow = true;
-      scene.add(obstacle);
+      const obstacleSpriteMaterial = new THREE.SpriteMaterial({
+        map: baum1Texture,
+        transparent: true
+      });
+      const obstacleSprite = new THREE.Sprite(obstacleSpriteMaterial);
+      obstacleSprite.scale.set(2.5, 3, 1); // Größer für Baum-Darstellung
+      obstacleSprite.position.set(pos.x, 1.5, pos.z); // Höher positioniert
+      scene.add(obstacleSprite);
+      obstacleMeshes.push(obstacleSprite);
       obstaclesRef.current.push({ x: pos.x, z: pos.z, size: 2 });
     });
 
     // Player - Donut Sprite
-    const textureLoader = new THREE.TextureLoader();
     const donutTexture = textureLoader.load('/assets/Donutplayer.png');
     const spriteMaterial = new THREE.SpriteMaterial({
       map: donutTexture,
