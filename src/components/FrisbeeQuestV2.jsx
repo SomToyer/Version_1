@@ -359,7 +359,7 @@ const FrisbeeQuestV2 = () => {
       obstacleSprite.position.set(pos.x, 1.5, pos.z); // Höher positioniert
       scene.add(obstacleSprite);
       obstacleMeshes.push(obstacleSprite);
-      obstaclesRef.current.push({ x: pos.x, z: pos.z, size: 1 }); // Kollisionsbox halb so groß
+      obstaclesRef.current.push({ x: pos.x, z: pos.z, sizeX: 0.8, sizeZ: 0.4 }); // Schmale Kollisionsbox (Baumstamm)
     });
 
     // Player - Donut Sprite
@@ -509,12 +509,13 @@ const FrisbeeQuestV2 = () => {
   // Obstacle Collision (AABB - Axis-Aligned Bounding Box)
   const checkObstacleCollision = (x, z, entityRadius = 0.5) => {
     return obstaclesRef.current.some(obstacle => {
-      const halfSize = obstacle.size / 2;
+      const halfSizeX = (obstacle.sizeX || obstacle.size || 1) / 2;
+      const halfSizeZ = (obstacle.sizeZ || obstacle.size || 1) / 2;
       return (
-        x + entityRadius > obstacle.x - halfSize &&
-        x - entityRadius < obstacle.x + halfSize &&
-        z + entityRadius > obstacle.z - halfSize &&
-        z - entityRadius < obstacle.z + halfSize
+        x + entityRadius > obstacle.x - halfSizeX &&
+        x - entityRadius < obstacle.x + halfSizeX &&
+        z + entityRadius > obstacle.z - halfSizeZ &&
+        z - entityRadius < obstacle.z + halfSizeZ
       );
     });
   };
@@ -548,12 +549,13 @@ const FrisbeeQuestV2 = () => {
 
     // Hindernisse (Bäume)
     obstaclesRef.current.forEach(obstacle => {
-      const halfSize = obstacle.size / 2;
+      const halfSizeX = (obstacle.sizeX || obstacle.size || 1) / 2;
+      const halfSizeZ = (obstacle.sizeZ || obstacle.size || 1) / 2;
       const colliding = (
-        frisbee.x + frisbeeRadius > obstacle.x - halfSize &&
-        frisbee.x - frisbeeRadius < obstacle.x + halfSize &&
-        frisbee.z + frisbeeRadius > obstacle.z - halfSize &&
-        frisbee.z - frisbeeRadius < obstacle.z + halfSize
+        frisbee.x + frisbeeRadius > obstacle.x - halfSizeX &&
+        frisbee.x - frisbeeRadius < obstacle.x + halfSizeX &&
+        frisbee.z + frisbeeRadius > obstacle.z - halfSizeZ &&
+        frisbee.z - frisbeeRadius < obstacle.z + halfSizeZ
       );
 
       if (colliding) {
@@ -562,22 +564,22 @@ const FrisbeeQuestV2 = () => {
         const fromTop = frisbee.z < obstacle.z;
 
         const overlapX = fromLeft
-          ? (frisbee.x + frisbeeRadius) - (obstacle.x - halfSize)
-          : (obstacle.x + halfSize) - (frisbee.x - frisbeeRadius);
+          ? (frisbee.x + frisbeeRadius) - (obstacle.x - halfSizeX)
+          : (obstacle.x + halfSizeX) - (frisbee.x - frisbeeRadius);
 
         const overlapZ = fromTop
-          ? (frisbee.z + frisbeeRadius) - (obstacle.z - halfSize)
-          : (obstacle.z + halfSize) - (frisbee.z - frisbeeRadius);
+          ? (frisbee.z + frisbeeRadius) - (obstacle.z - halfSizeZ)
+          : (obstacle.z + halfSizeZ) - (frisbee.z - frisbeeRadius);
 
         // Pralle in die Richtung ab, wo weniger Überlappung ist
         if (overlapX < overlapZ) {
           // Horizontal abprallen
           frisbee.vx = -frisbee.vx;
-          frisbee.x = fromLeft ? obstacle.x - halfSize - frisbeeRadius : obstacle.x + halfSize + frisbeeRadius;
+          frisbee.x = fromLeft ? obstacle.x - halfSizeX - frisbeeRadius : obstacle.x + halfSizeX + frisbeeRadius;
         } else {
           // Vertikal abprallen
           frisbee.vz = -frisbee.vz;
-          frisbee.z = fromTop ? obstacle.z - halfSize - frisbeeRadius : obstacle.z + halfSize + frisbeeRadius;
+          frisbee.z = fromTop ? obstacle.z - halfSizeZ - frisbeeRadius : obstacle.z + halfSizeZ + frisbeeRadius;
         }
         bounced = true;
       }
