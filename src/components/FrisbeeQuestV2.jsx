@@ -38,8 +38,8 @@ const FrisbeeQuestV2 = () => {
       powerUps: [], // Max 3
       hasShield: false,
       lastMoveDirection: { x: 1, z: 0 }, // Richtung in die der Spieler schaut
-      charging: false,
-      chargeTime: 0
+      meleeing: false, // Schlag-Animation
+      meleeTime: 0
     },
     frisbee: {
       active: false,
@@ -88,9 +88,9 @@ const FrisbeeQuestV2 = () => {
 
   const keysPressed = useRef({});
   const gamepadRef = useRef(null);
-  const gamepadButtonState = useRef({ throwButton: false });
-  const chargingStateRef = useRef({ isCharging: false, chargeTime: 0 });
-  const pendingThrowRef = useRef({ shouldThrow: false, chargeTime: 0 });
+  const gamepadButtonState = useRef({ throwButton: false, meleeButton: false });
+  const playerFrisbeeRef = useRef(null); // Frisbee-Visual am Spieler
+  const enemyFrisbeeVisuals = useRef([]); // Frisbee-Visuals an Gegnern
 
   // ===== SPAWN POWER-UP =====
   const spawnPowerUp = () => {
@@ -188,19 +188,14 @@ const FrisbeeQuestV2 = () => {
         }
       }
 
-      if (gameState === 'PLAYING' && e.key === ' ') {
-        // Start charging
-        if (!game.frisbee.active && !chargingStateRef.current.isCharging) {
-          chargingStateRef.current.isCharging = true;
-          chargingStateRef.current.chargeTime = 0;
-          setGame(prev => ({
-            ...prev,
-            player: {
-              ...prev.player,
-              charging: true,
-              chargeTime: 0
-            }
-          }));
+      if (gameState === 'PLAYING') {
+        // A-Taste oder Space: Werfen
+        if (e.key === ' ' || e.key.toLowerCase() === 'a') {
+          throwFrisbeeForward();
+        }
+        // B-Taste: Nahkampf
+        if (e.key.toLowerCase() === 'b') {
+          performMelee();
         }
       }
 
@@ -209,47 +204,28 @@ const FrisbeeQuestV2 = () => {
       }
     };
 
-    const handleKeyUp = (e) => {
-      keysPressed.current[e.key.toLowerCase()] = false;
-
-      // Release throw
-      if (gameState === 'PLAYING' && e.key === ' ' && chargingStateRef.current.isCharging) {
-        const chargeTime = chargingStateRef.current.chargeTime;
-        chargingStateRef.current.isCharging = false;
-        chargingStateRef.current.chargeTime = 0;
-
-        throwFrisbeeForward(chargeTime);
-        setGame(prev => ({
-          ...prev,
-          player: {
-            ...prev.player,
-            charging: false,
-            chargeTime: 0
-          }
-        }));
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [gameState, showControls]);
+  }, [gameState, showControls, game.frisbee.active]);
 
   // ===== GAMEPAD SUPPORT =====
   useEffect(() => {
-    const lastButtonState = { X: false };
+    const lastButtonState = { X: false, A: false, B: false };
 
     const gamepadInterval = setInterval(() => {
       const gamepads = navigator.getGamepads();
       if (gamepads[0]) {
         gamepadRef.current = gamepads[0];
 
-        // X-Button (Button 2)
+        // X-Button (Button 2) - Start/Neustart
         const xButtonPressed = gamepads[0].buttons[2]?.pressed;
+        // A-Button (Button 0) - Werfen
+        const aButtonPressed = gamepads[0].buttons[0]?.pressed;
+        // B-Button (Button 1) - Nahkampf
+        const bButtonPressed = gamepads[0].buttons[1]?.pressed;
 
         // Spielstart im Menü
         if (gameState === 'MENU' && xButtonPressed && !lastButtonState.X) {
@@ -263,12 +239,24 @@ const FrisbeeQuestV2 = () => {
           resetGame();
         }
 
+        // A-Button: Werfen
+        if (gameState === 'PLAYING' && aButtonPressed && !lastButtonState.A) {
+          throwFrisbeeForward();
+        }
+
+        // B-Button: Nahkampf
+        if (gameState === 'PLAYING' && bButtonPressed && !lastButtonState.B) {
+          performMelee();
+        }
+
         lastButtonState.X = xButtonPressed;
+        lastButtonState.A = aButtonPressed;
+        lastButtonState.B = bButtonPressed;
       }
     }, 100);
 
     return () => clearInterval(gamepadInterval);
-  }, [gameState]);
+  }, [gameState, game.frisbee.active]);
 
   // ===== THREE.JS SETUP =====
   useEffect(() => {
@@ -378,14 +366,15 @@ const FrisbeeQuestV2 = () => {
     scene.add(player);
     playerRef.current = player;
 
-    // Charge Arrow (initially hidden)
-    const arrowGeometry = new THREE.ConeGeometry(0.3, 1, 8);
-    const arrowMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const chargeArrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
-    chargeArrow.rotation.x = Math.PI / 2; // Point forward
-    chargeArrow.visible = false;
-    scene.add(chargeArrow);
-    chargeArrowRef.current = chargeArrow;
+    // Player Frisbee Visual (immer sichtbar, rechts vom Spieler)
+    const playerFrisbeeGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.08, 16);
+    const playerFrisbeeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+    const playerFrisbeeVisual = new THREE.Mesh(playerFrisbeeGeometry, playerFrisbeeMaterial);
+    playerFrisbeeVisual.position.set(-10 + 0.6, 0.75, 0); // Rechts vom Spieler
+    playerFrisbeeVisual.rotation.x = Math.PI / 2;
+    playerFrisbeeVisual.castShadow = true;
+    scene.add(playerFrisbeeVisual);
+    playerFrisbeeRef.current = playerFrisbeeVisual;
 
     // Enemies - Chillybot Sprites
     const enemyPositions = [
@@ -396,6 +385,7 @@ const FrisbeeQuestV2 = () => {
 
     const chillybotTexture = textureLoader.load('/assets/Chillybot.png');
     enemiesRef.current = [];
+    enemyFrisbeeVisuals.current = [];
     enemyPositions.forEach(() => {
       const enemySpriteMaterial = new THREE.SpriteMaterial({
         map: chillybotTexture,
@@ -406,6 +396,16 @@ const FrisbeeQuestV2 = () => {
       enemy.position.y = 0.75;
       scene.add(enemy);
       enemiesRef.current.push(enemy);
+
+      // Enemy Frisbee Visual (immer sichtbar, rechts vom Gegner)
+      const enemyFrisbeeGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.08, 16);
+      const enemyFrisbeeMaterial = new THREE.MeshLambertMaterial({ color: 0xff00ff });
+      const enemyFrisbeeVisual = new THREE.Mesh(enemyFrisbeeGeometry, enemyFrisbeeMaterial);
+      enemyFrisbeeVisual.position.y = 0.75;
+      enemyFrisbeeVisual.rotation.x = Math.PI / 2;
+      enemyFrisbeeVisual.castShadow = true;
+      scene.add(enemyFrisbeeVisual);
+      enemyFrisbeeVisuals.current.push(enemyFrisbeeVisual);
     });
 
     // Frisbee
@@ -470,21 +470,12 @@ const FrisbeeQuestV2 = () => {
   }, [game.powerUps]);
 
   // ===== THROW FRISBEE =====
-  const throwFrisbeeForward = (chargeTime = 0) => {
+  const throwFrisbeeForward = () => {
     if (game.frisbee.active || gameState !== 'PLAYING') return;
 
     setGame(prev => {
       const direction = prev.player.lastMoveDirection;
-      const multiCount = prev.player.powerUps.includes('MULTI') ? 3 : 1;
 
-      // Berechne Wurfweite basierend auf Ladezeit (0-2 Sekunden)
-      const maxChargeTime = 2000; // 2 Sekunden max
-      const chargeRatio = Math.min(chargeTime / maxChargeTime, 1);
-      const minDistance = 4;
-      const maxDistance = 15;
-      const throwDistance = minDistance + (maxDistance - minDistance) * chargeRatio;
-
-      // For now, just throw one frisbee (Multi can be expanded later)
       return {
         ...prev,
         frisbee: {
@@ -496,11 +487,48 @@ const FrisbeeQuestV2 = () => {
           startZ: prev.player.z,
           vx: direction.x * prev.frisbee.speed,
           vz: direction.z * prev.frisbee.speed,
-          returning: false,
-          maxDistance: throwDistance
+          returning: false
         }
       };
     });
+  };
+
+  // ===== MELEE ATTACK =====
+  const performMelee = () => {
+    if (gameState !== 'PLAYING' || game.player.meleeing) return;
+
+    setGame(prev => {
+      const newState = { ...prev };
+      newState.player.meleeing = true;
+      newState.player.meleeTime = 0;
+
+      // Prüfe Nahkampf-Treffer auf Gegner
+      const meleeRange = 1.5;
+      const direction = prev.player.lastMoveDirection;
+      const meleeX = prev.player.x + direction.x * meleeRange;
+      const meleeZ = prev.player.z + direction.z * meleeRange;
+
+      newState.enemies = newState.enemies.map(enemy => {
+        if (!enemy.alive) return enemy;
+        const distance = Math.sqrt(
+          (enemy.x - meleeX) ** 2 + (enemy.z - meleeZ) ** 2
+        );
+        if (distance < 1) {
+          return { ...enemy, alive: false };
+        }
+        return enemy;
+      });
+
+      return newState;
+    });
+
+    // Beende Schlag-Animation nach 200ms
+    setTimeout(() => {
+      setGame(prev => ({
+        ...prev,
+        player: { ...prev.player, meleeing: false, meleeTime: 0 }
+      }));
+    }, 200);
   };
 
   // ===== COLLISION =====
@@ -594,8 +622,6 @@ const FrisbeeQuestV2 = () => {
 
   // ===== RESET GAME =====
   const resetGame = () => {
-    chargingStateRef.current.isCharging = false;
-    chargingStateRef.current.chargeTime = 0;
     setGame({
       player: {
         x: -10,
@@ -607,8 +633,8 @@ const FrisbeeQuestV2 = () => {
         powerUps: [],
         hasShield: false,
         lastMoveDirection: { x: 1, z: 0 },
-        charging: false,
-        chargeTime: 0
+        meleeing: false,
+        meleeTime: 0
       },
       frisbee: {
         active: false,
@@ -665,12 +691,6 @@ const FrisbeeQuestV2 = () => {
       setGame(prev => {
         let newState = { ...prev };
 
-        // Charge Time Update
-        if (newState.player.charging) {
-          newState.player.chargeTime = Math.min(newState.player.chargeTime + 33, 2000); // Max 2 Sekunden
-          chargingStateRef.current.chargeTime = newState.player.chargeTime;
-        }
-
         // Player Movement
         const keys = keysPressed.current;
         let moveX = 0;
@@ -686,29 +706,6 @@ const FrisbeeQuestV2 = () => {
           const axes = gamepadRef.current.axes;
           if (Math.abs(axes[0]) > 0.15) moveX += axes[0];
           if (Math.abs(axes[1]) > 0.15) moveZ += axes[1];
-
-          const throwButtonPressed = gamepadRef.current.buttons[0]?.pressed;
-
-          // Button gerade gedrückt -> Start charging
-          if (throwButtonPressed && !gamepadButtonState.current.throwButton && !newState.frisbee.active && !chargingStateRef.current.isCharging) {
-            chargingStateRef.current.isCharging = true;
-            chargingStateRef.current.chargeTime = 0;
-            newState.player.charging = true;
-            newState.player.chargeTime = 0;
-          }
-
-          // Button losgelassen -> Werfen vorbereiten
-          if (!throwButtonPressed && gamepadButtonState.current.throwButton && chargingStateRef.current.isCharging) {
-            const chargeTime = chargingStateRef.current.chargeTime;
-            chargingStateRef.current.isCharging = false;
-            chargingStateRef.current.chargeTime = 0;
-            pendingThrowRef.current.shouldThrow = true;
-            pendingThrowRef.current.chargeTime = chargeTime;
-            newState.player.charging = false;
-            newState.player.chargeTime = 0;
-          }
-
-          gamepadButtonState.current.throwButton = throwButtonPressed;
         }
 
         const length = Math.sqrt(moveX * moveX + moveZ * moveZ);
@@ -986,16 +983,6 @@ const FrisbeeQuestV2 = () => {
     return () => clearInterval(intervalId);
   }, [gameState]);
 
-  // ===== PENDING GAMEPAD THROW =====
-  useEffect(() => {
-    if (pendingThrowRef.current.shouldThrow) {
-      const chargeTime = pendingThrowRef.current.chargeTime;
-      pendingThrowRef.current.shouldThrow = false;
-      pendingThrowRef.current.chargeTime = 0;
-      throwFrisbeeForward(chargeTime);
-    }
-  }, [game.player.charging]);
-
   // ===== UPDATE 3D OBJECTS =====
   useEffect(() => {
     if (playerRef.current) {
@@ -1010,6 +997,23 @@ const FrisbeeQuestV2 = () => {
       }
     }
 
+    // Player Frisbee Visual (immer sichtbar, rechts vom Spieler)
+    if (playerFrisbeeRef.current && !game.frisbee.active) {
+      const direction = game.player.lastMoveDirection;
+      // Rechts von der Bewegungsrichtung = Perpendicular
+      const rightX = -direction.z;
+      const rightZ = direction.x;
+      playerFrisbeeRef.current.position.x = game.player.x + rightX * 0.6;
+      playerFrisbeeRef.current.position.z = game.player.z + rightZ * 0.6;
+      playerFrisbeeRef.current.material.color.setHex(game.frisbee.color);
+    }
+    if (playerFrisbeeRef.current && game.frisbee.active) {
+      // Verstecke wenn geworfen
+      playerFrisbeeRef.current.visible = false;
+    } else if (playerFrisbeeRef.current) {
+      playerFrisbeeRef.current.visible = true;
+    }
+
     // Kamera folgt Spieler (höher für größere Arena)
     if (cameraRef.current && playerRef.current) {
       const cameraOffset = { x: 0, y: 16, z: 12 }; // Höher und weiter weg für größere Arena
@@ -1019,35 +1023,23 @@ const FrisbeeQuestV2 = () => {
       cameraRef.current.lookAt(game.player.x, 0, game.player.z);
     }
 
-    // Charge Arrow Update
-    if (chargeArrowRef.current) {
-      if (game.player.charging) {
-        chargeArrowRef.current.visible = true;
-
-        // Position vor dem Spieler
-        const direction = game.player.lastMoveDirection;
-        const distance = 2 + (game.player.chargeTime / 2000) * 3; // 2-5 Einheiten
-        chargeArrowRef.current.position.x = game.player.x + direction.x * distance;
-        chargeArrowRef.current.position.z = game.player.z + direction.z * distance;
-        chargeArrowRef.current.position.y = 0.75;
-
-        // Rotation in Wurfrichtung
-        const angle = Math.atan2(direction.x, direction.z);
-        chargeArrowRef.current.rotation.y = -angle;
-
-        // Skalierung basierend auf Ladezeit
-        const scale = 0.5 + (game.player.chargeTime / 2000) * 1.5; // 0.5-2.0
-        chargeArrowRef.current.scale.set(scale, scale, scale);
-      } else {
-        chargeArrowRef.current.visible = false;
-      }
-    }
-
     game.enemies.forEach((enemy, index) => {
       if (enemiesRef.current[index]) {
         enemiesRef.current[index].position.x = enemy.x;
         enemiesRef.current[index].position.z = enemy.z;
         enemiesRef.current[index].visible = enemy.alive;
+      }
+
+      // Enemy Frisbee Visual (immer sichtbar, rechts vom Gegner)
+      if (enemyFrisbeeVisuals.current[index] && !game.enemyFrisbees[index].active && enemy.alive) {
+        const direction = enemy.lastMoveDirection;
+        const rightX = -direction.z;
+        const rightZ = direction.x;
+        enemyFrisbeeVisuals.current[index].position.x = enemy.x + rightX * 0.6;
+        enemyFrisbeeVisuals.current[index].position.z = enemy.z + rightZ * 0.6;
+        enemyFrisbeeVisuals.current[index].visible = true;
+      } else if (enemyFrisbeeVisuals.current[index]) {
+        enemyFrisbeeVisuals.current[index].visible = false;
       }
     });
 
