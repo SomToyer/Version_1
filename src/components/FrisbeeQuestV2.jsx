@@ -230,13 +230,22 @@ const FrisbeeQuestV2 = () => {
       }
 
       if (gameState === 'PLAYING') {
-        // A-Taste oder Space: Werfen
+        // Player 1: A-Taste oder Space: Werfen
         if (e.key === ' ' || e.key.toLowerCase() === 'a') {
           throwFrisbeeForward();
         }
-        // B-Taste: Nahkampf
+        // Player 1: B-Taste: Nahkampf
         if (e.key.toLowerCase() === 'b') {
           performMelee();
+        }
+
+        // Player 2: Enter oder Numpad 0: Werfen
+        if (e.key === 'Enter' || e.key === '0') {
+          throwFrisbeeForwardP2();
+        }
+        // Player 2: Shift oder Numpad 1: Nahkampf
+        if (e.key === 'Shift' || e.key === '1') {
+          performMeleeP2();
         }
       }
 
@@ -946,15 +955,15 @@ const FrisbeeQuestV2 = () => {
       setGame(prev => {
         let newState = { ...prev };
 
-        // Player Movement
+        // Player 1 Movement (WASD only)
         const keys = keysPressed.current;
         let moveX = 0;
         let moveZ = 0;
 
-        if (keys['w'] || keys['arrowup']) moveZ -= 1;
-        if (keys['s'] || keys['arrowdown']) moveZ += 1;
-        if (keys['a'] || keys['arrowleft']) moveX -= 1;
-        if (keys['d'] || keys['arrowright']) moveX += 1;
+        if (keys['w']) moveZ -= 1;
+        if (keys['s']) moveZ += 1;
+        if (keys['a']) moveX -= 1;
+        if (keys['d']) moveX += 1;
 
         // Gamepad 1
         if (gamepad1Ref.current) {
@@ -1051,9 +1060,15 @@ const FrisbeeQuestV2 = () => {
           return true;
         });
 
-        // Player 2 Movement
+        // Player 2 Movement (Arrow keys + Gamepad 2)
         let move2X = 0;
         let move2Z = 0;
+
+        // Arrow keys for Player 2
+        if (keys['arrowup']) move2Z -= 1;
+        if (keys['arrowdown']) move2Z += 1;
+        if (keys['arrowleft']) move2X -= 1;
+        if (keys['arrowright']) move2X += 1;
 
         // Gamepad 2
         if (gamepad2Ref.current) {
@@ -1579,16 +1594,32 @@ const FrisbeeQuestV2 = () => {
             {showControls && (
               <div className="bg-gray-800 p-6 rounded-lg max-w-2xl">
                 <h3 className="text-2xl font-bold mb-4">🎮 STEUERUNG</h3>
-                <div className="grid grid-cols-2 gap-4 text-lg mb-4">
+                <div className="grid grid-cols-2 gap-6 text-lg mb-4">
                   <div>
-                    <p className="font-bold text-yellow-400">Tastatur:</p>
+                    <p className="font-bold text-yellow-400">Spieler 1 - Tastatur:</p>
                     <p>WASD - Bewegen</p>
-                    <p>LEERTASTE - Frisbee werfen</p>
+                    <p>LEERTASTE/A - Werfen</p>
+                    <p>B - Nahkampf</p>
                   </div>
                   <div>
-                    <p className="font-bold text-green-400">Xbox Controller:</p>
+                    <p className="font-bold text-pink-400">Spieler 2 - Tastatur:</p>
+                    <p>Pfeiltasten - Bewegen</p>
+                    <p>ENTER/0 - Werfen</p>
+                    <p>SHIFT/1 - Nahkampf</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-6 text-lg mb-4 border-t border-gray-600 pt-4">
+                  <div>
+                    <p className="font-bold text-green-400">Spieler 1 - Controller:</p>
                     <p>Linker Stick - Bewegen</p>
                     <p>A-Button - Werfen</p>
+                    <p>B-Button - Nahkampf</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-orange-400">Spieler 2 - Controller:</p>
+                    <p>Linker Stick - Bewegen</p>
+                    <p>A-Button - Werfen</p>
+                    <p>B-Button - Nahkampf</p>
                   </div>
                 </div>
                 <div className="mt-4 border-t border-gray-600 pt-4">
