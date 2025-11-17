@@ -26,6 +26,12 @@ const FrisbeeQuestV2 = () => {
   const powerUpMeshesRef = useRef([]);
   const chargeArrowRef = useRef(null);
 
+  // Mouse control refs
+  const mouseFollowActive = useRef(false);
+  const mouseWorldPos = useRef({ x: 0, z: 0 });
+  const raycaster = useRef(new THREE.Raycaster());
+  const mouse = useRef(new THREE.Vector2());
+
   const [gameState, setGameState] = useState('MENU');
   const [showControls, setShowControls] = useState(false);
 
@@ -329,6 +335,73 @@ const FrisbeeQuestV2 = () => {
     }, 100);
 
     return () => clearInterval(gamepadInterval);
+  }, [gameState]);
+
+  // ===== MOUSE CONTROLS FOR PLAYER 2 =====
+  useEffect(() => {
+    if (!mountRef.current) return;
+
+    const handleMouseClick = (event) => {
+      if (gameState !== 'PLAYING') return;
+
+      const canvas = mountRef.current.querySelector('canvas');
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      mouse.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.current.setFromCamera(mouse.current, cameraRef.current);
+
+      // Check if Player 2 was clicked
+      if (player2Ref.current) {
+        const intersects = raycaster.current.intersectObject(player2Ref.current);
+
+        if (intersects.length > 0) {
+          // Toggle mouse follow mode
+          mouseFollowActive.current = !mouseFollowActive.current;
+        } else if (mouseFollowActive.current) {
+          // If mouse follow is active but clicked elsewhere, deactivate
+          mouseFollowActive.current = false;
+        }
+      }
+    };
+
+    const handleMouseMove = (event) => {
+      if (!mouseFollowActive.current || gameState !== 'PLAYING') return;
+
+      const canvas = mountRef.current.querySelector('canvas');
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      mouse.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.current.setFromCamera(mouse.current, cameraRef.current);
+
+      // Create a plane at y=0 (ground level)
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const intersectionPoint = new THREE.Vector3();
+      raycaster.current.ray.intersectPlane(plane, intersectionPoint);
+
+      if (intersectionPoint) {
+        mouseWorldPos.current.x = intersectionPoint.x;
+        mouseWorldPos.current.z = intersectionPoint.z;
+      }
+    };
+
+    const canvas = mountRef.current.querySelector('canvas');
+    if (canvas) {
+      canvas.addEventListener('click', handleMouseClick);
+      canvas.addEventListener('mousemove', handleMouseMove);
+    }
+
+    return () => {
+      if (canvas) {
+        canvas.removeEventListener('click', handleMouseClick);
+        canvas.removeEventListener('mousemove', handleMouseMove);
+      }
+    };
   }, [gameState]);
 
   // ===== THREE.JS SETUP =====
@@ -1060,33 +1133,64 @@ const FrisbeeQuestV2 = () => {
           return true;
         });
 
-        // Player 2 Movement (Arrow keys + Gamepad 2)
+        // Player 2 Movement (Arrow keys + Gamepad 2 + Mouse)
         let move2X = 0;
         let move2Z = 0;
 
-        // Arrow keys for Player 2
-        if (keys['arrowup']) move2Z -= 1;
-        if (keys['arrowdown']) move2Z += 1;
-        if (keys['arrowleft']) move2X -= 1;
-        if (keys['arrowright']) move2X += 1;
+        // Mouse follow mode (overrides keyboard/gamepad)
+        if (mouseFollowActive.current) {
+          const dx = mouseWorldPos.current.x - newState.player2.x;
+          const dz = mouseWorldPos.current.z - newState.player2.z;
+          const distance = Math.sqrt(dx * dx + dz * dz);
 
-        // Gamepad 2
-        if (gamepad2Ref.current) {
-          const axes = gamepad2Ref.current.axes;
-          if (Math.abs(axes[0]) > 0.15) move2X += axes[0];
-          if (Math.abs(axes[1]) > 0.15) move2Z += axes[1];
+          // Follow distance threshold (player keeps this distance from mouse)
+          const followDistance = 2.5;
+
+          // Only move if distance is greater than followDistance
+          if (distance > followDistance) {
+            const moveDistance = distance - followDistance;
+            const normalizedDx = dx / distance;
+            const normalizedDz = dz / distance;
+
+            // Smooth movement - move a portion of the distance
+            const smoothFactor = Math.min(moveDistance * 0.1, newState.player2.speed);
+            move2X = normalizedDx * smoothFactor;
+            move2Z = normalizedDz * smoothFactor;
+
+            // Update facing direction
+            newState.player2.lastMoveDirection = {
+              x: normalizedDx,
+              z: normalizedDz
+            };
+          }
+        } else {
+          // Arrow keys for Player 2
+          if (keys['arrowup']) move2Z -= 1;
+          if (keys['arrowdown']) move2Z += 1;
+          if (keys['arrowleft']) move2X -= 1;
+          if (keys['arrowright']) move2X += 1;
+
+          // Gamepad 2
+          if (gamepad2Ref.current) {
+            const axes = gamepad2Ref.current.axes;
+            if (Math.abs(axes[0]) > 0.15) move2X += axes[0];
+            if (Math.abs(axes[1]) > 0.15) move2Z += axes[1];
+          }
+
+          const length2 = Math.sqrt(move2X * move2X + move2Z * move2Z);
+          if (length2 > 0) {
+            move2X = (move2X / length2) * newState.player2.speed;
+            move2Z = (move2Z / length2) * newState.player2.speed;
+
+            newState.player2.lastMoveDirection = {
+              x: move2X / newState.player2.speed,
+              z: move2Z / newState.player2.speed
+            };
+          }
         }
 
-        const length2 = Math.sqrt(move2X * move2X + move2Z * move2Z);
-        if (length2 > 0) {
-          move2X = (move2X / length2) * newState.player2.speed;
-          move2Z = (move2Z / length2) * newState.player2.speed;
-
-          newState.player2.lastMoveDirection = {
-            x: move2X / newState.player2.speed,
-            z: move2Z / newState.player2.speed
-          };
-
+        // Update velocity
+        if (move2X !== 0 || move2Z !== 0) {
           newState.player2.currentVelocity = { x: move2X, z: move2Z };
         } else {
           newState.player2.currentVelocity = { x: 0, z: 0 };
@@ -1606,6 +1710,14 @@ const FrisbeeQuestV2 = () => {
                     <p>Pfeiltasten - Bewegen</p>
                     <p>ENTER/0 - Werfen</p>
                     <p>SHIFT/1 - Nahkampf</p>
+                  </div>
+                </div>
+                <div className="mb-4 border-t border-gray-600 pt-4">
+                  <div>
+                    <p className="font-bold text-cyan-400">🖱️ Spieler 2 - Maussteuerung:</p>
+                    <p className="text-base">Klicke auf den Burger-Spieler um Maussteuerung zu aktivieren</p>
+                    <p className="text-base">Burger folgt der Maus mit etwas Abstand</p>
+                    <p className="text-base">Klicke erneut auf den Burger oder woanders hin zum Deaktivieren</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-6 text-lg mb-4 border-t border-gray-600 pt-4">
