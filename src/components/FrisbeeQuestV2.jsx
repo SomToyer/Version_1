@@ -228,6 +228,12 @@ const FrisbeeQuestV2 = () => {
     const handleKeyDown = (e) => {
       keysPressed.current[e.key.toLowerCase()] = true;
 
+      // Handle special keys that don't lowercase well
+      if (e.key === 'ArrowUp') keysPressed.current['arrowup'] = true;
+      if (e.key === 'ArrowDown') keysPressed.current['arrowdown'] = true;
+      if (e.key === 'ArrowLeft') keysPressed.current['arrowleft'] = true;
+      if (e.key === 'ArrowRight') keysPressed.current['arrowright'] = true;
+
       if (gameState === 'MENU') {
         if (e.key === 'Enter' || e.key === ' ') {
           setGameState('PLAYING');
@@ -270,10 +276,22 @@ const FrisbeeQuestV2 = () => {
       }
     };
 
+    const handleKeyUp = (e) => {
+      keysPressed.current[e.key.toLowerCase()] = false;
+
+      // Handle special keys that don't lowercase well
+      if (e.key === 'ArrowUp') keysPressed.current['arrowup'] = false;
+      if (e.key === 'ArrowDown') keysPressed.current['arrowdown'] = false;
+      if (e.key === 'ArrowLeft') keysPressed.current['arrowleft'] = false;
+      if (e.key === 'ArrowRight') keysPressed.current['arrowright'] = false;
+    };
+
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, [gameState, showControls]);
 
