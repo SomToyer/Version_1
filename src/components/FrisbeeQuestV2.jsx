@@ -32,6 +32,11 @@ const FrisbeeQuestV2 = () => {
   const raycaster = useRef(new THREE.Raycaster());
   const mouse = useRef(new THREE.Vector2());
 
+  // Fullscreen refs
+  const rendererRef = useRef(null);
+  const containerRef = useRef(null);
+  const isFullscreen = useRef(false);
+
   const [gameState, setGameState] = useState('MENU');
   const [showControls, setShowControls] = useState(false);
 
@@ -258,6 +263,11 @@ const FrisbeeQuestV2 = () => {
       if (gameState === 'GAME_OVER' && e.key === 'r') {
         resetGame();
       }
+
+      // M-Taste: Vollbild umschalten
+      if (e.key.toLowerCase() === 'm') {
+        toggleFullscreen();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -266,6 +276,59 @@ const FrisbeeQuestV2 = () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [gameState, showControls]);
+
+  // ===== FULLSCREEN TOGGLE =====
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      // Enter fullscreen
+      containerRef.current.requestFullscreen().then(() => {
+        isFullscreen.current = true;
+        // HD scaling: 1920x1080
+        if (rendererRef.current && cameraRef.current) {
+          rendererRef.current.setSize(1920, 1080);
+          cameraRef.current.aspect = 1920 / 1080;
+          cameraRef.current.updateProjectionMatrix();
+        }
+      }).catch(err => {
+        console.error('Fullscreen error:', err);
+      });
+    } else {
+      // Exit fullscreen
+      document.exitFullscreen().then(() => {
+        isFullscreen.current = false;
+        // Back to normal size: 800x600
+        if (rendererRef.current && cameraRef.current) {
+          rendererRef.current.setSize(800, 600);
+          cameraRef.current.aspect = 800 / 600;
+          cameraRef.current.updateProjectionMatrix();
+        }
+      }).catch(err => {
+        console.error('Exit fullscreen error:', err);
+      });
+    }
+  };
+
+  // Handle fullscreen change (e.g., when user presses ESC)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen.current) {
+        isFullscreen.current = false;
+        // Back to normal size: 800x600
+        if (rendererRef.current && cameraRef.current) {
+          rendererRef.current.setSize(800, 600);
+          cameraRef.current.aspect = 800 / 600;
+          cameraRef.current.updateProjectionMatrix();
+        }
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   // ===== GAMEPAD SUPPORT =====
   useEffect(() => {
@@ -422,6 +485,7 @@ const FrisbeeQuestV2 = () => {
     renderer.setSize(800, 600);
     renderer.shadowMap.enabled = true;
     mountRef.current.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
@@ -1681,10 +1745,14 @@ const FrisbeeQuestV2 = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 p-4">
       <h1 className="text-4xl font-bold text-white mb-4">🥏 Frisbee Quest 3D - MVP v0.2a - wie Fu 🥏</h1>
 
-      <div className="relative">
+      <div
+        ref={containerRef}
+        className="relative bg-gray-900"
+        style={{ width: isFullscreen.current ? '100%' : 'auto', height: isFullscreen.current ? '100%' : 'auto' }}
+      >
         <div
           ref={mountRef}
-          className="border-4 border-yellow-500 rounded-lg"
+          className="border-4 border-yellow-500 rounded-lg mx-auto"
           style={{ width: '800px', height: '600px' }}
         />
 
@@ -1732,6 +1800,13 @@ const FrisbeeQuestV2 = () => {
                     <p>Linker Stick - Bewegen</p>
                     <p>A-Button - Werfen</p>
                     <p>B-Button - Nahkampf</p>
+                  </div>
+                </div>
+                <div className="mb-4 border-t border-gray-600 pt-4">
+                  <div>
+                    <p className="font-bold text-purple-400">📺 Vollbild:</p>
+                    <p className="text-base">M - Vollbild umschalten (HD 1920x1080)</p>
+                    <p className="text-base">ESC - Vollbild beenden</p>
                   </div>
                 </div>
                 <div className="mt-4 border-t border-gray-600 pt-4">
