@@ -285,11 +285,20 @@ const FrisbeeQuestV2 = () => {
       // Enter fullscreen
       containerRef.current.requestFullscreen().then(() => {
         isFullscreen.current = true;
-        // HD scaling: 1920x1080
-        if (rendererRef.current && cameraRef.current) {
-          rendererRef.current.setSize(1920, 1080);
-          cameraRef.current.aspect = 1920 / 1080;
+        // Use actual screen dimensions
+        const width = window.screen.width;
+        const height = window.screen.height;
+
+        if (rendererRef.current && cameraRef.current && mountRef.current) {
+          rendererRef.current.setSize(width, height);
+          cameraRef.current.aspect = width / height;
           cameraRef.current.updateProjectionMatrix();
+
+          // Update mount div style for fullscreen
+          mountRef.current.style.width = width + 'px';
+          mountRef.current.style.height = height + 'px';
+          mountRef.current.style.border = 'none';
+          mountRef.current.style.borderRadius = '0';
         }
       }).catch(err => {
         console.error('Fullscreen error:', err);
@@ -299,10 +308,16 @@ const FrisbeeQuestV2 = () => {
       document.exitFullscreen().then(() => {
         isFullscreen.current = false;
         // Back to normal size: 800x600
-        if (rendererRef.current && cameraRef.current) {
+        if (rendererRef.current && cameraRef.current && mountRef.current) {
           rendererRef.current.setSize(800, 600);
           cameraRef.current.aspect = 800 / 600;
           cameraRef.current.updateProjectionMatrix();
+
+          // Reset mount div style
+          mountRef.current.style.width = '800px';
+          mountRef.current.style.height = '600px';
+          mountRef.current.style.border = '4px solid #eab308';
+          mountRef.current.style.borderRadius = '0.5rem';
         }
       }).catch(err => {
         console.error('Exit fullscreen error:', err);
@@ -316,10 +331,16 @@ const FrisbeeQuestV2 = () => {
       if (!document.fullscreenElement && isFullscreen.current) {
         isFullscreen.current = false;
         // Back to normal size: 800x600
-        if (rendererRef.current && cameraRef.current) {
+        if (rendererRef.current && cameraRef.current && mountRef.current) {
           rendererRef.current.setSize(800, 600);
           cameraRef.current.aspect = 800 / 600;
           cameraRef.current.updateProjectionMatrix();
+
+          // Reset mount div style
+          mountRef.current.style.width = '800px';
+          mountRef.current.style.height = '600px';
+          mountRef.current.style.border = '4px solid #eab308';
+          mountRef.current.style.borderRadius = '0.5rem';
         }
       }
     };
@@ -1747,12 +1768,11 @@ const FrisbeeQuestV2 = () => {
 
       <div
         ref={containerRef}
-        className="relative bg-gray-900"
-        style={{ width: isFullscreen.current ? '100%' : 'auto', height: isFullscreen.current ? '100%' : 'auto' }}
+        className="relative bg-gray-900 flex items-center justify-center"
       >
         <div
           ref={mountRef}
-          className="border-4 border-yellow-500 rounded-lg mx-auto"
+          className="border-4 border-yellow-500 rounded-lg"
           style={{ width: '800px', height: '600px' }}
         />
 
