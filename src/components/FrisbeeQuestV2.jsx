@@ -593,8 +593,8 @@ const FrisbeeQuestV2 = () => {
     arenaFloor.receiveShadow = true;
     scene.add(arenaFloor);
 
-    // Walls
-    const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
+    // Walls - HELLBLAU ALS TEST
+    const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x87ceeb });
     const northWall = new THREE.Mesh(new THREE.BoxGeometry(60, 3, 0.5), wallMaterial);
     northWall.position.set(0, 1.5, -20);
     northWall.castShadow = true;
