@@ -39,6 +39,9 @@ const FrisbeeQuestV2 = () => {
 
   const [gameState, setGameState] = useState('MENU');
   const [showControls, setShowControls] = useState(false);
+  const [gameSettings, setGameSettings] = useState({
+    frisbeesEnabled: true
+  });
 
   const [game, setGame] = useState({
     player: {
@@ -243,6 +246,12 @@ const FrisbeeQuestV2 = () => {
         }
         if (e.key.toLowerCase() === 'c') {
           setShowControls(!showControls);
+        }
+        if (e.key.toLowerCase() === 'f') {
+          setGameSettings(prev => ({
+            ...prev,
+            frisbeesEnabled: !prev.frisbeesEnabled
+          }));
         }
       }
 
@@ -752,7 +761,7 @@ const FrisbeeQuestV2 = () => {
 
   // ===== THROW FRISBEE =====
   const throwFrisbeeForward = () => {
-    if (game.frisbee.active || gameState !== 'PLAYING') return;
+    if (!gameSettings.frisbeesEnabled || game.frisbee.active || gameState !== 'PLAYING') return;
 
     setGame(prev => {
       const direction = prev.player.lastMoveDirection;
@@ -830,7 +839,7 @@ const FrisbeeQuestV2 = () => {
 
   // ===== PLAYER 2 THROW FRISBEE =====
   const throwFrisbeeForwardP2 = () => {
-    if (game.frisbee2.active || gameState !== 'PLAYING') return;
+    if (!gameSettings.frisbeesEnabled || game.frisbee2.active || gameState !== 'PLAYING') return;
 
     setGame(prev => {
       const direction = prev.player2.lastMoveDirection;
@@ -1345,8 +1354,8 @@ const FrisbeeQuestV2 = () => {
               moveZ = (dzToPlayer / distanceToPlayer) * enemy.speed;
             }
 
-            // Wirf Frisbee in Bewegungsrichtung (nur wenn nicht zu nah)
-            if (!newState.enemyFrisbees[index].active && distanceToPlayer > 3 && distanceToPlayer < 8) {
+            // Wirf Frisbee in Bewegungsrichtung (nur wenn nicht zu nah und Frisbees aktiviert sind)
+            if (gameSettings.frisbeesEnabled && !newState.enemyFrisbees[index].active && distanceToPlayer > 3 && distanceToPlayer < 8) {
               const direction = newEnemy.lastMoveDirection || { x: dxToPlayer / distanceToPlayer, z: dzToPlayer / distanceToPlayer };
               newState.enemyFrisbees[index] = {
                 ...newState.enemyFrisbees[index],
@@ -1638,8 +1647,8 @@ const FrisbeeQuestV2 = () => {
       }
     }
 
-    // Player Frisbee Visual (immer sichtbar, rechts vom Spieler)
-    if (playerFrisbeeRef.current && !game.frisbee.active) {
+    // Player Frisbee Visual (immer sichtbar, rechts vom Spieler, wenn aktiviert)
+    if (playerFrisbeeRef.current && !game.frisbee.active && gameSettings.frisbeesEnabled) {
       const direction = game.player.lastMoveDirection;
       // Rechts von der Bewegungsrichtung = Perpendicular
       const rightX = -direction.z;
@@ -1659,8 +1668,8 @@ const FrisbeeQuestV2 = () => {
       playerFrisbeeRef.current.position.z = game.player.z + rightZ * 0.6 + swingOffsetZ;
       playerFrisbeeRef.current.material.color.setHex(game.frisbee.color);
     }
-    if (playerFrisbeeRef.current && game.frisbee.active) {
-      // Verstecke wenn geworfen
+    if (playerFrisbeeRef.current && (game.frisbee.active || !gameSettings.frisbeesEnabled)) {
+      // Verstecke wenn geworfen oder wenn Frisbees deaktiviert sind
       playerFrisbeeRef.current.visible = false;
     } else if (playerFrisbeeRef.current) {
       playerFrisbeeRef.current.visible = true;
@@ -1679,7 +1688,7 @@ const FrisbeeQuestV2 = () => {
     }
 
     // Player 2 Frisbee Visual
-    if (player2FrisbeeRef.current && !game.frisbee2.active) {
+    if (player2FrisbeeRef.current && !game.frisbee2.active && gameSettings.frisbeesEnabled) {
       const direction = game.player2.lastMoveDirection;
       const rightX = -direction.z;
       const rightZ = direction.x;
@@ -1696,7 +1705,7 @@ const FrisbeeQuestV2 = () => {
       player2FrisbeeRef.current.position.z = game.player2.z + rightZ * 0.6 + swingOffsetZ;
       player2FrisbeeRef.current.material.color.setHex(game.frisbee2.color);
     }
-    if (player2FrisbeeRef.current && game.frisbee2.active) {
+    if (player2FrisbeeRef.current && (game.frisbee2.active || !gameSettings.frisbeesEnabled)) {
       player2FrisbeeRef.current.visible = false;
     } else if (player2FrisbeeRef.current) {
       player2FrisbeeRef.current.visible = true;
@@ -1741,8 +1750,8 @@ const FrisbeeQuestV2 = () => {
         enemiesRef.current[index].visible = enemy.alive;
       }
 
-      // Enemy Frisbee Visual (immer sichtbar, rechts vom Gegner)
-      if (enemyFrisbeeVisuals.current[index] && !game.enemyFrisbees[index].active && enemy.alive) {
+      // Enemy Frisbee Visual (immer sichtbar, rechts vom Gegner, wenn aktiviert)
+      if (enemyFrisbeeVisuals.current[index] && !game.enemyFrisbees[index].active && enemy.alive && gameSettings.frisbeesEnabled) {
         const direction = enemy.lastMoveDirection;
         const rightX = -direction.z;
         const rightZ = direction.x;
@@ -1799,7 +1808,17 @@ const FrisbeeQuestV2 = () => {
           <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center text-white">
             <h2 className="text-6xl font-bold mb-8 text-yellow-400">FRISBEE QUEST</h2>
             <p className="text-3xl mb-4">Drücke ENTER zum Starten</p>
-            <p className="text-xl mb-8">Drücke C für Controls</p>
+            <p className="text-xl mb-2">Drücke C für Controls</p>
+
+            {/* Frisbee Toggle Setting */}
+            <div className="bg-gray-800 px-6 py-3 rounded-lg mb-4 border-2 border-blue-400">
+              <p className="text-xl mb-2">
+                <span className="font-bold">Drücke F zum Umschalten:</span>
+              </p>
+              <p className={`text-2xl font-bold ${gameSettings.frisbeesEnabled ? 'text-green-400' : 'text-red-400'}`}>
+                🥏 Frisbees: {gameSettings.frisbeesEnabled ? 'AKTIVIERT ✓' : 'DEAKTIVIERT ✗'}
+              </p>
+            </div>
 
             {showControls && (
               <div className="bg-gray-800 p-6 rounded-lg max-w-2xl">
