@@ -256,6 +256,12 @@ const FrisbeeQuestV2 = () => {
       }
 
       if (gameState === 'PLAYING') {
+        // ESC: Pause
+        if (e.key === 'Escape') {
+          setGameState('PAUSED');
+          return;
+        }
+
         // Player 1: A-Taste oder Space: Werfen
         if (e.key === ' ' || e.key.toLowerCase() === 'a') {
           throwFrisbeeForward();
@@ -272,6 +278,20 @@ const FrisbeeQuestV2 = () => {
         // Player 2: Shift oder Numpad 1: Nahkampf
         if (e.key === 'Shift' || e.key === '1') {
           performMeleeP2();
+        }
+      }
+
+      if (gameState === 'PAUSED') {
+        // ESC: Resume
+        if (e.key === 'Escape') {
+          setGameState('PLAYING');
+        }
+        // F: Toggle Frisbees
+        if (e.key.toLowerCase() === 'f') {
+          setGameSettings(prev => ({
+            ...prev,
+            frisbeesEnabled: !prev.frisbeesEnabled
+          }));
         }
       }
 
@@ -1861,9 +1881,9 @@ const FrisbeeQuestV2 = () => {
                 </div>
                 <div className="mb-4 border-t border-gray-600 pt-4">
                   <div>
-                    <p className="font-bold text-purple-400">📺 Vollbild:</p>
+                    <p className="font-bold text-purple-400">📺 Vollbild & Pause:</p>
                     <p className="text-base">M - Vollbild umschalten (HD 1920x1080)</p>
-                    <p className="text-base">ESC - Vollbild beenden</p>
+                    <p className="text-base">ESC - Spiel pausieren / Vollbild beenden</p>
                   </div>
                 </div>
                 <div className="mt-4 border-t border-gray-600 pt-4">
@@ -1882,6 +1902,28 @@ const FrisbeeQuestV2 = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* PAUSE MENU */}
+        {gameState === 'PAUSED' && (
+          <div className="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center text-white">
+            <h2 className="text-6xl font-bold mb-8 text-cyan-400">⏸️ PAUSE</h2>
+
+            {/* Frisbee Toggle Setting */}
+            <div className="bg-gray-800 px-8 py-4 rounded-lg mb-6 border-2 border-cyan-400">
+              <p className="text-2xl mb-3">
+                <span className="font-bold">Drücke F zum Umschalten:</span>
+              </p>
+              <p className={`text-3xl font-bold ${gameSettings.frisbeesEnabled ? 'text-green-400' : 'text-red-400'}`}>
+                🥏 Frisbees: {gameSettings.frisbeesEnabled ? 'AKTIVIERT ✓' : 'DEAKTIVIERT ✗'}
+              </p>
+            </div>
+
+            <div className="bg-gray-800 px-8 py-4 rounded-lg border-2 border-gray-600">
+              <p className="text-2xl mb-2">Drücke ESC zum Fortsetzen</p>
+              <p className="text-lg text-gray-400">oder F5 zum Neustart</p>
+            </div>
           </div>
         )}
 
@@ -1904,7 +1946,7 @@ const FrisbeeQuestV2 = () => {
         )}
 
         {/* ACTIVE POWER-UPS - Obere linke Ecke */}
-        {gameState === 'PLAYING' && game.player.powerUps.length > 0 && (
+        {(gameState === 'PLAYING' || gameState === 'PAUSED') && game.player.powerUps.length > 0 && (
           <div className="absolute top-4 left-4 bg-black bg-opacity-70 rounded-lg p-3 border-2 border-blue-400">
             <div className="flex gap-2">
               {game.player.powerUps.map((puType, index) => {
@@ -1925,7 +1967,7 @@ const FrisbeeQuestV2 = () => {
       </div>
 
       {/* HUD */}
-      {gameState === 'PLAYING' && (
+      {(gameState === 'PLAYING' || gameState === 'PAUSED') && (
         <div className="mt-4 w-full max-w-4xl">
           <div className="flex justify-between text-white text-xl mb-2">
             <div className="bg-gray-800 px-6 py-3 rounded-lg">
