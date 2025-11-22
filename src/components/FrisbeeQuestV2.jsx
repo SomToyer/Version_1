@@ -257,8 +257,13 @@ const FrisbeeQuestV2 = () => {
       }
 
       if (gameState === 'PLAYING') {
-        // ESC: Pause
-        if (e.key === 'Escape') {
+        // ESC: Pause (nur wenn nicht im Fullscreen, da Browser ESC für Fullscreen-Exit nutzt)
+        // P: Pause (funktioniert immer)
+        if (e.key === 'Escape' && !document.fullscreenElement) {
+          setGameState('PAUSED');
+          return;
+        }
+        if (e.key.toLowerCase() === 'p') {
           setGameState('PAUSED');
           return;
         }
@@ -283,8 +288,8 @@ const FrisbeeQuestV2 = () => {
       }
 
       if (gameState === 'PAUSED') {
-        // ESC: Resume
-        if (e.key === 'Escape') {
+        // ESC oder P: Resume
+        if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
           setGameState('PLAYING');
         }
         // F: Toggle Frisbees
@@ -1912,7 +1917,8 @@ const FrisbeeQuestV2 = () => {
                   <div>
                     <p className="font-bold text-purple-400">📺 Vollbild & Pause:</p>
                     <p className="text-base">M - Vollbild umschalten (HD 1920x1080)</p>
-                    <p className="text-base">ESC - Spiel pausieren / Vollbild beenden</p>
+                    <p className="text-base">P - Spiel pausieren/fortsetzen</p>
+                    <p className="text-base">ESC - Vollbild beenden / Pause (wenn nicht im Vollbild)</p>
                   </div>
                 </div>
                 <div className="mt-4 border-t border-gray-600 pt-4">
@@ -1965,7 +1971,7 @@ const FrisbeeQuestV2 = () => {
             </div>
 
             <div className="bg-gray-800 px-8 py-4 rounded-lg border-2 border-gray-600">
-              <p className="text-2xl mb-2">Drücke ESC zum Fortsetzen</p>
+              <p className="text-2xl mb-2">Drücke ESC oder P zum Fortsetzen</p>
               <p className="text-lg text-gray-400">oder F5 zum Neustart</p>
             </div>
           </div>
