@@ -40,7 +40,8 @@ const FrisbeeQuestV2 = () => {
   const [gameState, setGameState] = useState('MENU');
   const [showControls, setShowControls] = useState(false);
   const [gameSettings, setGameSettings] = useState({
-    frisbeesEnabled: true
+    frisbeesEnabled: true,
+    cameraMode: 'third-person' // 'third-person' or 'first-person'
   });
 
   const [game, setGame] = useState({
@@ -291,6 +292,13 @@ const FrisbeeQuestV2 = () => {
           setGameSettings(prev => ({
             ...prev,
             frisbeesEnabled: !prev.frisbeesEnabled
+          }));
+        }
+        // V: Toggle Camera Mode
+        if (e.key.toLowerCase() === 'v') {
+          setGameSettings(prev => ({
+            ...prev,
+            cameraMode: prev.cameraMode === 'third-person' ? 'first-person' : 'third-person'
           }));
         }
       }
@@ -1665,10 +1673,13 @@ const FrisbeeQuestV2 = () => {
       } else {
         playerRef.current.material.color.setHex(0xffffff);
       }
+
+      // Hide player in first-person mode
+      playerRef.current.visible = gameSettings.cameraMode !== 'first-person';
     }
 
     // Player Frisbee Visual (immer sichtbar, rechts vom Spieler, wenn aktiviert)
-    if (playerFrisbeeRef.current && !game.frisbee.active && gameSettings.frisbeesEnabled) {
+    if (playerFrisbeeRef.current && !game.frisbee.active && gameSettings.frisbeesEnabled && gameSettings.cameraMode !== 'first-person') {
       const direction = game.player.lastMoveDirection;
       // Rechts von der Bewegungsrichtung = Perpendicular
       const rightX = -direction.z;
@@ -1688,8 +1699,8 @@ const FrisbeeQuestV2 = () => {
       playerFrisbeeRef.current.position.z = game.player.z + rightZ * 0.6 + swingOffsetZ;
       playerFrisbeeRef.current.material.color.setHex(game.frisbee.color);
     }
-    if (playerFrisbeeRef.current && (game.frisbee.active || !gameSettings.frisbeesEnabled)) {
-      // Verstecke wenn geworfen oder wenn Frisbees deaktiviert sind
+    if (playerFrisbeeRef.current && (game.frisbee.active || !gameSettings.frisbeesEnabled || gameSettings.cameraMode === 'first-person')) {
+      // Verstecke wenn geworfen oder wenn Frisbees deaktiviert sind oder in Ego-Perspektive
       playerFrisbeeRef.current.visible = false;
     } else if (playerFrisbeeRef.current) {
       playerFrisbeeRef.current.visible = true;
@@ -1731,36 +1742,54 @@ const FrisbeeQuestV2 = () => {
       player2FrisbeeRef.current.visible = true;
     }
 
-    // Kamera folgt beiden Spielern dynamisch
+    // Kamera folgt beiden Spielern dynamisch oder First-Person für Player 1
     if (cameraRef.current && playerRef.current && player2Ref.current) {
-      // Berechne Mittelpunkt zwischen beiden Spielern
-      const centerX = (game.player.x + game.player2.x) / 2;
-      const centerZ = (game.player.z + game.player2.z) / 2;
+      if (gameSettings.cameraMode === 'first-person') {
+        // First-Person Perspektive - Donut (Player 1)
+        const direction = game.player.lastMoveDirection;
 
-      // Berechne Distanz zwischen beiden Spielern
-      const dx = game.player.x - game.player2.x;
-      const dz = game.player.z - game.player2.z;
-      const distanceBetweenPlayers = Math.sqrt(dx * dx + dz * dz);
+        // Kamera Position: Leicht über dem Spieler (Augenhöhe)
+        const eyeHeight = 1.2;
+        cameraRef.current.position.x = game.player.x;
+        cameraRef.current.position.y = eyeHeight;
+        cameraRef.current.position.z = game.player.z;
 
-      // Dynamische Kamera-Höhe und Distanz basierend auf Spieler-Abstand
-      // Min: 16 units hoch bei nahen Spielern, Max: 30 units bei weit entfernten
-      const minHeight = 16;
-      const maxHeight = 30;
-      const minDistance = 12;
-      const maxDistance = 25;
+        // Schaue in die Bewegungsrichtung des Spielers
+        const lookAtDistance = 10; // Wie weit voraus schauen wir
+        const lookAtX = game.player.x + direction.x * lookAtDistance;
+        const lookAtZ = game.player.z + direction.z * lookAtDistance;
+        cameraRef.current.lookAt(lookAtX, eyeHeight, lookAtZ);
+      } else {
+        // Third-Person Perspektive - beide Spieler
+        // Berechne Mittelpunkt zwischen beiden Spielern
+        const centerX = (game.player.x + game.player2.x) / 2;
+        const centerZ = (game.player.z + game.player2.z) / 2;
 
-      // Je weiter die Spieler auseinander, desto höher/weiter die Kamera
-      const distanceFactor = Math.min(distanceBetweenPlayers / 20, 1); // Normalisiert auf 0-1
-      const cameraHeight = minHeight + (maxHeight - minHeight) * distanceFactor;
-      const cameraDistance = minDistance + (maxDistance - minDistance) * distanceFactor;
+        // Berechne Distanz zwischen beiden Spielern
+        const dx = game.player.x - game.player2.x;
+        const dz = game.player.z - game.player2.z;
+        const distanceBetweenPlayers = Math.sqrt(dx * dx + dz * dz);
 
-      // Kamera Position
-      cameraRef.current.position.x = centerX;
-      cameraRef.current.position.y = cameraHeight;
-      cameraRef.current.position.z = centerZ + cameraDistance;
+        // Dynamische Kamera-Höhe und Distanz basierend auf Spieler-Abstand
+        // Min: 16 units hoch bei nahen Spielern, Max: 30 units bei weit entfernten
+        const minHeight = 16;
+        const maxHeight = 30;
+        const minDistance = 12;
+        const maxDistance = 25;
 
-      // Schaue auf den Mittelpunkt
-      cameraRef.current.lookAt(centerX, 0, centerZ);
+        // Je weiter die Spieler auseinander, desto höher/weiter die Kamera
+        const distanceFactor = Math.min(distanceBetweenPlayers / 20, 1); // Normalisiert auf 0-1
+        const cameraHeight = minHeight + (maxHeight - minHeight) * distanceFactor;
+        const cameraDistance = minDistance + (maxDistance - minDistance) * distanceFactor;
+
+        // Kamera Position
+        cameraRef.current.position.x = centerX;
+        cameraRef.current.position.y = cameraHeight;
+        cameraRef.current.position.z = centerZ + cameraDistance;
+
+        // Schaue auf den Mittelpunkt
+        cameraRef.current.lookAt(centerX, 0, centerZ);
+      }
     }
 
     game.enemies.forEach((enemy, index) => {
@@ -1807,7 +1836,7 @@ const FrisbeeQuestV2 = () => {
         }
       }
     });
-  }, [game]);
+  }, [game, gameSettings]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 p-4">
@@ -1910,14 +1939,29 @@ const FrisbeeQuestV2 = () => {
           <div className="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center text-white">
             <h2 className="text-6xl font-bold mb-8 text-cyan-400">⏸️ PAUSE</h2>
 
-            {/* Frisbee Toggle Setting */}
+            {/* Settings */}
             <div className="bg-gray-800 px-8 py-4 rounded-lg mb-6 border-2 border-cyan-400">
-              <p className="text-2xl mb-3">
-                <span className="font-bold">Drücke F zum Umschalten:</span>
-              </p>
-              <p className={`text-3xl font-bold ${gameSettings.frisbeesEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                🥏 Frisbees: {gameSettings.frisbeesEnabled ? 'AKTIVIERT ✓' : 'DEAKTIVIERT ✗'}
-              </p>
+              <p className="text-2xl mb-4 font-bold text-cyan-300">⚙️ EINSTELLUNGEN</p>
+
+              {/* Frisbee Toggle */}
+              <div className="mb-4">
+                <p className="text-xl mb-2">
+                  <span className="font-bold">Drücke F zum Umschalten:</span>
+                </p>
+                <p className={`text-2xl font-bold ${gameSettings.frisbeesEnabled ? 'text-green-400' : 'text-red-400'}`}>
+                  🥏 Frisbees: {gameSettings.frisbeesEnabled ? 'AKTIVIERT ✓' : 'DEAKTIVIERT ✗'}
+                </p>
+              </div>
+
+              {/* Camera Mode Toggle */}
+              <div className="border-t border-gray-600 pt-4">
+                <p className="text-xl mb-2">
+                  <span className="font-bold">Drücke V zum Umschalten:</span>
+                </p>
+                <p className={`text-2xl font-bold ${gameSettings.cameraMode === 'first-person' ? 'text-blue-400' : 'text-orange-400'}`}>
+                  📷 Kamera: {gameSettings.cameraMode === 'first-person' ? 'EGO-PERSPEKTIVE 👁️' : 'THIRD-PERSON 🎮'}
+                </p>
+              </div>
             </div>
 
             <div className="bg-gray-800 px-8 py-4 rounded-lg border-2 border-gray-600">
